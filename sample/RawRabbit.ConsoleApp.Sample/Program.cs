@@ -24,7 +24,7 @@ namespace RawRabbit.ConsoleApp.Sample
 		public static async Task RunAsync()
 		{
 			Log.Logger = new LoggerConfiguration()
-				.WriteTo.LiterateConsole()
+				.WriteTo.Console()
 				.CreateLogger();
 
 			_client = RawRabbitFactory.CreateSingleton(new RawRabbitOptions
