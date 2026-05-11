@@ -20,6 +20,8 @@ namespace RawRabbit.Enrichers.GlobalExecutionId.Dependencies
 			return GlobalExecutionId?.Value;
 #elif NET451
 			return CallContext.LogicalGetData(GlobalExecutionId) as string;
+#else
+			return null;
 #endif
 		}
 
