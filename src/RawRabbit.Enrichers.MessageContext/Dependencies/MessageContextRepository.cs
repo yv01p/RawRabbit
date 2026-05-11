@@ -33,6 +33,8 @@ namespace RawRabbit.Enrichers.MessageContext.Dependencies
 			return _msgContext?.Value;
 #elif NET451
 			return CallContext.LogicalGetData(MessageContext) as object;
+#else
+			return null;
 #endif
 		}
 
