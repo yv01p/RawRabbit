@@ -221,3 +221,7 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
+
+# Session-local docs (handoffs and CDR/CIR reviews are temporary working artifacts)
+handoffs/
+docs/criticalreviews/
