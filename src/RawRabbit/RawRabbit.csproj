@@ -11,12 +11,12 @@
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" />
     <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
 </Project>
