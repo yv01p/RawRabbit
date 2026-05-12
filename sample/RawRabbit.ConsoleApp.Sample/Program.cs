@@ -8,7 +8,9 @@ using RawRabbit.Enrichers.MessageContext;
 using RawRabbit.Enrichers.MessageContext.Context;
 using RawRabbit.Instantiation;
 using RawRabbit.Messages.Sample;
+using RawRabbit.Logging;
 using Serilog;
+using Serilog.Extensions.Logging;
 
 namespace RawRabbit.ConsoleApp.Sample
 {
@@ -26,6 +28,8 @@ namespace RawRabbit.ConsoleApp.Sample
 			Log.Logger = new LoggerConfiguration()
 				.WriteTo.Console()
 				.CreateLogger();
+
+			LogProvider.LoggerFactory = new SerilogLoggerFactory(Log.Logger);
 
 			_client = RawRabbitFactory.CreateSingleton(new RawRabbitOptions
 			{
