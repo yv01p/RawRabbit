@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageIconUrl>http://pardahlman.se/raw/icon.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/pardahlman/RawRabbit</PackageProjectUrl>
+  </PropertyGroup>
+</Project>
