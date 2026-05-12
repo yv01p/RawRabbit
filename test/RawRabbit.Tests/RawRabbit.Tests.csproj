@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Authors>par.dahlman</Authors>
-    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
     <AssemblyName>RawRabbit.Tests</AssemblyName>
     <PackageId>RawRabbit.Tests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
