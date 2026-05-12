@@ -170,6 +170,13 @@ This task is **atomic by build necessity**: deleting LibLog.cs without the shim 
           public static void Trace(this ILog l, string m, params object[] a) => l.LogTrace      (m, a);
           public static void Fatal(this ILog l, string m, params object[] a) => l.LogCritical   (m, a);
 
+          public static void Info (this ILog l, Exception ex, string m, params object[] a) => l.LogInformation(ex, m, a);
+          public static void Debug(this ILog l, Exception ex, string m, params object[] a) => l.LogDebug      (ex, m, a);
+          public static void Warn (this ILog l, Exception ex, string m, params object[] a) => l.LogWarning    (ex, m, a);
+          public static void Error(this ILog l, Exception ex, string m, params object[] a) => l.LogError      (ex, m, a);
+          public static void Trace(this ILog l, Exception ex, string m, params object[] a) => l.LogTrace      (ex, m, a);
+          public static void Fatal(this ILog l, Exception ex, string m, params object[] a) => l.LogCritical   (ex, m, a);
+
           public static void InfoException (this ILog l, string m, Exception ex, params object[] a) => l.LogInformation(ex, m, a);
           public static void DebugException(this ILog l, string m, Exception ex, params object[] a) => l.LogDebug      (ex, m, a);
           public static void WarnException (this ILog l, string m, Exception ex, params object[] a) => l.LogWarning    (ex, m, a);
