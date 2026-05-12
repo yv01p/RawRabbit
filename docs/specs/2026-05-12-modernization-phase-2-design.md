@@ -134,7 +134,7 @@ Total file touch count: 33 csprojs (25 src + 4 test + 2 sample + 2 dropped) + 2 
 | Tests stay green | `dotnet test test/RawRabbit.Tests --no-build -c Release` reports 29 passed / 7 skipped / 0 failed; `dotnet test test/RawRabbit.Enrichers.Polly.Tests --no-build -c Release` reports 1 passed / 2 skipped / 0 failed |
 | CPM works | `dotnet restore` produces 0 NU1010 errors (would fire if a `<PackageReference>` exists without a matching `<PackageVersion>`) |
 | Pack works | `dotnet pack -c Release --no-build` produces exactly 25 `.nupkg` files (one per src library); 0 from tests/samples |
-| Side-fix worked | `grep -c PackageProjectUrl src/RawRabbit.Operations.Tools/RawRabbit.Operations.Tools.csproj` returns 1 (was 2 before) |
+| Side-fix worked | `grep -c PackageProjectUrl src/RawRabbit.Operations.Tools/RawRabbit.Operations.Tools.csproj` returns 0 (was 2 before; both lines removed when `<PackageProjectUrl>` is moved to `Directory.Build.props`, naturally subsuming the duplicate side-fix) |
 
 ## 5. Risks & responses
 
