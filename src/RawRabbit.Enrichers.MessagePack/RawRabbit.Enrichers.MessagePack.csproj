@@ -1,14 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
     <Authors>LordMike</Authors>
     <AssemblyTitle>RawRabbit.Enrichers.MessagePack</AssemblyTitle>
     <VersionPrefix>2.0.0</VersionPrefix>
     <PackageId>RawRabbit.Enrichers.MessagePack</PackageId>
     <PackageTags>rabbitmq;rawrabbit;messagepack</PackageTags>
-    <PackageIconUrl>http://pardahlman.se/raw/icon.png</PackageIconUrl>
-    <PackageProjectUrl>https://github.com/pardahlman/RawRabbit</PackageProjectUrl>
     <Description>Serialize messages with MessagePack in RawRabbit</Description>
   </PropertyGroup>
 

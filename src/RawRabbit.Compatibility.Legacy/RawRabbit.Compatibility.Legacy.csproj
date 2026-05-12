@@ -5,12 +5,9 @@
     <AssemblyTitle>RawRabbit.Compatibility.Legacy</AssemblyTitle>
     <Version>2.0.0-alpha</Version>
     <Authors>pardahlman</Authors>
-    <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>RawRabbit.Compatibility.Legacy</AssemblyName>
     <PackageId>RawRabbit.Compatibility.Legacy</PackageId>
     <PackageTags>rabbitmq;rawrabbit;compatibility</PackageTags>
-    <PackageIconUrl>http://pardahlman.se/raw/icon.png</PackageIconUrl>
-    <PackageProjectUrl>https://github.com/pardahlman/RawRabbit</PackageProjectUrl>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>

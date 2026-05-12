@@ -5,12 +5,9 @@
     <AssemblyTitle>RawRabbit.DependencyInjection.Autofac</AssemblyTitle>
     <VersionPrefix>2.0.0</VersionPrefix>
     <Authors>par.dahlman</Authors>
-    <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>RawRabbit.DependencyInjection.Autofac</AssemblyName>
     <PackageId>RawRabbit.DependencyInjection.Autofac</PackageId>
     <PackageTags>rabbitmq;rawrabbit;autofac;ioc</PackageTags>
-    <PackageIconUrl>http://pardahlman.se/raw/icon.png</PackageIconUrl>
-    <PackageProjectUrl>https://github.com/pardahlman/RawRabbit</PackageProjectUrl>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
