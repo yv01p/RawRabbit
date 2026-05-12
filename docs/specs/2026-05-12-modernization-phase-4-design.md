@@ -145,7 +145,7 @@ Replaces the 11-setting Newtonsoft block. Settings translation table in §4 belo
 | `Formatting.None` | *(STJ default — `WriteIndented = false`)* | Set explicitly for clarity |
 | `ContractResolver = new DefaultContractResolver { NamingStrategy = new CamelCaseNamingStrategy() }` | `PropertyNamingPolicy = JsonNamingPolicy.CamelCase` | Wire shape preserved for camelCase property names |
 | `NullValueHandling.Ignore` | `DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull` | Direct equivalent |
-| `DefaultValueHandling.Ignore` | *(rolled into above)* | STJ collapses both into one enum. Picking `WhenWritingNull` (not `WhenWritingDefault`) preserves Newtonsoft behavior for primitives (`0`/`false`/`""` still serialize) |
+| `DefaultValueHandling.Ignore` | *(rolled into above)* | STJ collapses both Null- and Default-Value handling into one enum. We pick `WhenWritingNull` (not `WhenWritingDefault`) to preserve null-handling parity with Newtonsoft. Newtonsoft additionally dropped default-value primitives via `DefaultValueHandling.Ignore`; STJ + `WhenWritingNull` does NOT — this is a wire-format change documented in §6 |
 | `MissingMemberHandling.Ignore` | *(STJ default — unknown JSON properties silently ignored)* | No setting needed |
 | `CheckAdditionalContent = true` | *(STJ default — throws on trailing content after a JSON document)* | No setting needed |
 | `TypeNameAssemblyFormatHandling.Simple` | *(no equivalent; drops with `TypeNameHandling`)* | — |
@@ -174,9 +174,10 @@ These are behavior changes Phase 4 introduces that consumers of this fork will s
 
 1. **No `$type` on the wire.** Consumers that relied on Newtonsoft's `TypeNameHandling.Auto` for embedded polymorphic fields must add `[JsonDerivedType(typeof(Derived), "discriminator")]` attributes to their base message types, OR use concrete fields. RawRabbit's *top-level* message type is unaffected — it travels via the `message_type` AMQP header, not via `$type` on the JSON body.
 2. **No `$id`/`$ref` on the wire.** Reference identity is not preserved; same object referenced twice becomes two copies. Cyclic message graphs throw on serialize (`JsonException`).
-3. **STJ's narrower `ObjectCreationHandling`.** Existing collection properties on a target object are not reused during deserialization; STJ creates a new collection each time.
-4. **Camel-case naming.** STJ camelCase is mechanically the same as Newtonsoft `CamelCaseNamingStrategy` for ASCII property names. No known difference for the property names used by RawRabbit's own types; consumer types with non-ASCII property names may differ at the edges.
-5. **Carries forward from prior phases:** `RawRabbit.Enrichers.HttpContext` still has no functional implementation on net10 (Phase 1 V1); `test/RawRabbit.IntegrationTests` still requires a live broker (Phase 6); the heterogeneous metadata acceptances from Phase 2 (`Authors` values, `<VersionPrefix>` on `Compatibility.Legacy`, `<GenerateAssembly*>` flags on MessagePack/Protobuf/ZeroFormatter) remain as documented.
+3. **Default-value primitives appear on the wire.** Newtonsoft's `DefaultValueHandling.Ignore` was omitting members whose value equaled the type default (`0` for `int`, `false` for `bool`, `""` for `string`). STJ `WhenWritingNull` keeps these — `{"name": "x", "count": 0}` instead of Newtonsoft's `{"name": "x"}`. To restore Newtonsoft's omission, switch the option to `WhenWritingDefault`; the spec picks `WhenWritingNull` to keep semantically-meaningful zero/false/empty values explicit on the wire.
+4. **STJ's narrower `ObjectCreationHandling`.** Existing collection properties on a target object are not reused during deserialization; STJ creates a new collection each time.
+5. **Camel-case naming.** STJ camelCase is mechanically the same as Newtonsoft `CamelCaseNamingStrategy` for ASCII property names. No known difference for the property names used by RawRabbit's own types; consumer types with non-ASCII property names may differ at the edges.
+6. **Carries forward from prior phases:** `RawRabbit.Enrichers.HttpContext` still has no functional implementation on net10 (Phase 1 V1); `test/RawRabbit.IntegrationTests` still requires a live broker (Phase 6); the heterogeneous metadata acceptances from Phase 2 (`Authors` values, `<VersionPrefix>` on `Compatibility.Legacy`, `<GenerateAssembly*>` flags on MessagePack/Protobuf/ZeroFormatter) remain as documented.
 
 ## 7. Risks & responses
 
