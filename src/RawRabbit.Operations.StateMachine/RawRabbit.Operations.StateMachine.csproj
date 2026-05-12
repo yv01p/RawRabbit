@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Stateless" Version="3.0.0" />
+    <PackageReference Include="Stateless" />
   </ItemGroup>
 
 </Project>

@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZeroFormatter" Version="1.6.4" />
+    <PackageReference Include="ZeroFormatter" />
   </ItemGroup>
 
   <ItemGroup>

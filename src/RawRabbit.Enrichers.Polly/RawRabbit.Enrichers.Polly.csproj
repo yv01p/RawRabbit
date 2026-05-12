@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Polly" Version="5.3.1" />
+    <PackageReference Include="Polly" />
   </ItemGroup>
 
 </Project>
