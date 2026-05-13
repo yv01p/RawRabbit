@@ -296,7 +296,7 @@ Newly introduced by this plan and verified empirically against HEAD `9b5837d` at
 **Files:**
 - Modify: `test/RawRabbit.Tests/Common/ConnectionStringParserTests.cs`
 
-This is the largest cleanup file (357 lines, 14 tests, all NON-SKIPPED). It's also the strongest `[Theory]/[InlineData]` candidate (12 of 14 tests follow the same input-shape).
+This is the largest cleanup file (357 lines, 15 tests, all NON-SKIPPED). It's also the strongest `[Theory]/[InlineData]` candidate (13 of 15 tests follow the same input-shape).
 
 - [ ] **Step 1: Convert 2 try/catch → `Assert.Throws<T>`.** (Per VP-1 — spec §4 missed these.)
 
@@ -407,7 +407,7 @@ This is the largest cleanup file (357 lines, 14 tests, all NON-SKIPPED). It's al
   dotnet test test/RawRabbit.Tests --no-build -c Release --filter "FullyQualifiedName~ConnectionStringParserTests"
   ```
 
-  Expected: 0 build errors; ConnectionStringParserTests: 14 individual `[Fact]`/`[Theory]` test results pass — but post-Theory consolidation, the test method count drops while the per-row test result count stays at 14 (`[Theory]` rows each report as separate test results). Skipped count: 0 (unchanged — no skipped tests in this file).
+  Expected: 0 build errors; ConnectionStringParserTests: 15 individual `[Fact]`/`[Theory]` test results pass — Cluster A's 8 [InlineData] rows + Cluster B's 5 [InlineData] rows + 2 try/catch [Fact] tests = 15 (post-Theory consolidation: test method count drops from 15 to 4, but per-row test result count stays at 15). Skipped count: 0 (unchanged — no skipped tests in this file).
 
 - [ ] **Step 5: Commit.**
 
@@ -475,7 +475,7 @@ This is the largest cleanup file (357 lines, 14 tests, all NON-SKIPPED). It's al
 | File | Spec §4 totals (all hits) | Wave 1 actual work (NON-SKIPPED only) |
 |------|------|---------|
 | ChannelFactoryTests.cs | 2 Assert.True(true), 0 IsType, 0 AAA | **0 — all 4 tests skipped (verify-only)** |
-| ChannelPoolTests.cs | 5 Assert.True(true), 0 IsType, 0 AAA per spec §4; **+3 xUnit1031 + 4 xUnit2020 per CIR R1** | **NON-SKIPPED: 2 Assert.True(true) + 1 try/catch + 1 xUnit2020 (tests #6 line 187 + #8 lines 234-243) + 3 xUnit1031 in tests #5 (lines 153/159) + #6 (line 185) per CIR R1 §2 F1 path a. SKIPPED-test-body D10 exception per CIR R1 §3 α: 3 `Assert.True(false, msg)` → `Assert.Fail(msg)` at lines 123, 212, 263 (style-only; assertions in skipped tests never execute).** |
+| ChannelPoolTests.cs | 5 Assert.True(true), 0 IsType, 0 AAA per spec §4; **+3 xUnit1031 + 4 xUnit2020 per CIR R1; +9 NON-SKIPPED AAA in tests #1, #2, #3 per CIR R2** | **NON-SKIPPED: 2 Assert.True(true) + 1 try/catch + 1 xUnit2020 (tests #6 line 187 + #8 lines 234-243) + 3 xUnit1031 in tests #5 (lines 153/159) + #6 (line 185) per CIR R1 §2 F1 path a + 9 AAA in tests #1, #2, #3 (lines 19, 30, 36, 46, 60, 66, 76, 92, 99) per CIR R2 §2 F1 path a. SKIPPED-test-body D10 exception per CIR R1 §3 α: 3 `Assert.True(false, msg)` → `Assert.Fail(msg)` at lines 123, 212, 263 (style-only; assertions in skipped tests never execute). 7 SKIPPED-test AAA hits at lines 109, 119, 193, 207, 248, 258, 259 stay per D10.** |
 | DynamicChannelPoolTests.cs | 1 Assert.True(true), 0 IsType, 9 AAA | **1 Assert.True(true) + 9 AAA (no skipped tests)** |
 
 The 3 Assert.True(true) hits at lines 127, 216, 267 (inside skipped tests, A25 #1) stay UNCHANGED per D10. Separately: the 3 `Assert.True(false, msg)` lines at 123, 212, 263 (also inside skipped tests, but a different anti-pattern — xUnit2020) get converted to `Assert.Fail(msg)` per the §3 α resolution above (D10-letter exception authorized by CIR R1; behaviorally inert since skipped assertions never execute).
@@ -562,15 +562,17 @@ The 3 Assert.True(true) hits at lines 127, 216, 267 (inside skipped tests, A25 #
 
 - [ ] **Step 4: ChannelPoolTests.cs — preserve 3 skip annotations + Phase 5/7 commentary; convert 3 dead-code `Assert.True(false, msg)` → `Assert.Fail(msg)` inside skipped-test bodies (per CIR R1 §3 α resolution).** Skip annotations at lines 106, 190, 245 retain their `[Fact(Skip = "Phase 5/7 territory: …")]` decorations UNCHANGED. Skipped-test bodies retain all setup code, broker-mocking, and Phase 5/7 commentary UNCHANGED — except: each of the 3 skipped tests contains a single `Assert.True(false, "<msg>")` line (originally at lines 123, 212, 263; line numbers shift after Steps 1-3) that triggers xUnit2020. Convert each to `Assert.Fail("<msg>")` (same xUnit failure message, modern API). D10-letter exception authorized by CIR R1 §3 forced-decision (α): behaviorally inert (skipped assertions never execute); D10's spirit preserved (skip annotation + Phase 5/7 commentary intact; broker-mocking intact). Per D10 + spec §13.1 (annotations preserved); per §3 α (Assert.Fail conversion).
 
-- [ ] **Step 5: DynamicChannelPoolTests.cs — drop `Assert.True(true, …)` from `Should_Not_Throw_Exception_If_Trying_To_Remove_Channel_Not_In_Pool` (line 49).** Same pattern as Step 2: drop the `Assert.True` line; no replacement needed. Resulting body ends:
+- [ ] **Step 5: ChannelPoolTests.cs — convert 9 AAA `/* Setup */ /* Test */ /* Assert */` comments to blank lines in NON-SKIPPED tests #1, #2, #3 (per CIR R2 §2 F1 path a).** Replace each AAA comment line with a blank line at lines 19, 30, 36 (test #1 `Should_Serve_Open_Channels_In_A_Round_Robin_Manner`), lines 46, 60, 66 (test #2 `Should_Not_Serve_Closed_Channels`), lines 76, 92, 99 (test #3 `Should_Serve_Recovered_Channels`). Same approach as Task 3 Step 3 / Task 4 Step 2 / Task 5 Step 7. The 7 AAA hits inside the 3 SKIPPED tests at lines 109, 119, 193, 207, 248, 258, 259 stay UNCHANGED per D10. Spec §4 anti-pattern table reports `0 AAA` for ChannelPoolTests.cs — same shape of undercount as VP-1/VP-2 (try/catch) and CIR R1 §2 F1 (xUnit1031); CIR R2 §2 F1 is the third instance.
+
+- [ ] **Step 6: DynamicChannelPoolTests.cs — drop `Assert.True(true, …)` from `Should_Not_Throw_Exception_If_Trying_To_Remove_Channel_Not_In_Pool` (line 49).** Same pattern as Step 2: drop the `Assert.True` line; no replacement needed. Resulting body ends:
 
   ```csharp
   pool.Remove(channel.Object);
   ```
 
-- [ ] **Step 6: DynamicChannelPoolTests.cs — convert all 9 AAA comments to blank lines.** 3 tests × 3 comments each = 9 AAA hits.
+- [ ] **Step 7: DynamicChannelPoolTests.cs — convert all 9 AAA comments to blank lines.** 3 tests × 3 comments each = 9 AAA hits.
 
-- [ ] **Step 7: ChannelFactoryTests.cs (Channel) — verify skip-preservation.** No edits. Confirm:
+- [ ] **Step 8: ChannelFactoryTests.cs (Channel) — verify skip-preservation.** No edits. Confirm:
 
   ```bash
   grep -c '\[Fact(Skip = "Phase 5/7' test/RawRabbit.Tests/Channel/ChannelFactoryTests.cs
@@ -579,16 +581,16 @@ The 3 Assert.True(true) hits at lines 127, 216, 267 (inside skipped tests, A25 #
 
   All 4 skip annotations at lines 15, 46, 77, 103 with the same Phase 5/7 commentary as before this wave.
 
-- [ ] **Step 8: Build + targeted test run.**
+- [ ] **Step 9: Build + targeted test run.**
 
   ```bash
   dotnet build -c Release
   dotnet test test/RawRabbit.Tests --no-build -c Release --filter "FullyQualifiedName~RawRabbit.Tests.Channel"
   ```
 
-  Expected: 0 build errors; Channel namespace tests: 8 passed (was 8 — same non-skipped count: 5 in ChannelPoolTests + 3 in DynamicChannelPoolTests + 0 in ChannelFactoryTests), 7 skipped (preserved: 4 in ChannelFactoryTests + 3 in ChannelPoolTests), 0 failed.
+  Expected: 0 build errors; Channel namespace tests: 9 passed (was 9 — same non-skipped count: 6 in ChannelPoolTests + 3 in DynamicChannelPoolTests + 0 in ChannelFactoryTests), 7 skipped (preserved: 4 in ChannelFactoryTests + 3 in ChannelPoolTests), 0 failed.
 
-- [ ] **Step 9: Commit.**
+- [ ] **Step 10: Commit.**
 
   ```bash
   git add test/RawRabbit.Tests/Channel/ChannelPoolTests.cs test/RawRabbit.Tests/Channel/DynamicChannelPoolTests.cs
@@ -669,7 +671,7 @@ This task confirms spec §7 acceptance condition 1 ("Wave 1 shipped (mandatory)"
   done
   ```
 
-  Expected: NON-SKIPPED `Assert.True(true)` hits remain only in skipped tests (ChannelPoolTests lines 127, 216, 267 — 3 total; ChannelFactoryTests lines 38, 42, 69, 73 — 4 total per-line within skipped tests). Generic-IsType hits gone. AAA comments gone. NON-SKIPPED try/catch gone (note: Polly Services/ChannelFactoryTests.cs's skipped-test try/catch — if any — stays).
+  Expected: NON-SKIPPED `Assert.True(true)` hits remain only in skipped tests (ChannelPoolTests lines 127, 216, 267 — 3 total; ChannelFactoryTests lines 38, 42, 69, 73 — 4 total per-line within skipped tests). Generic-IsType hits gone. AAA comments gone from NON-SKIPPED tests; 7 SKIPPED-test AAA hits remain in `ChannelPoolTests.cs` at lines 109, 119, 193, 207, 248, 258, 259 per D10 (lines may shift relative to pre-Wave-1 due to Task 5 edits). NON-SKIPPED try/catch gone (note: Polly Services/ChannelFactoryTests.cs's skipped-test try/catch — if any — stays).
 
 - [ ] **Step 3: 2 new JsonSerializer tests pass + 2 cosmetics applied (§7 condition 1, partial).**
 
