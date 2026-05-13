@@ -10,6 +10,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Common
 {
+	[Xunit.Collection("LogProviderState")]
 	public class ExclusiveLockTests : IDisposable
 	{
 		private readonly Mock<ILoggerFactory> _mockFactory = new Mock<ILoggerFactory>();
