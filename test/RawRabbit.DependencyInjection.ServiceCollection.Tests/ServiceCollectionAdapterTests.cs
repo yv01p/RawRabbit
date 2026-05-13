@@ -45,7 +45,7 @@ namespace RawRabbit.Tests.DependencyInjection.ServiceCollectionTests
 			adapter.AddTransient<IAnotherService, AnotherService>();
 			var provider = collection.BuildServiceProvider();
 
-			Assert.ThrowsAny<Exception>(() => provider.GetService<IAnotherService>());
+			Assert.Throws<InvalidOperationException>(() => provider.GetService<IAnotherService>());
 		}
 
 		[Fact]
@@ -74,7 +74,7 @@ namespace RawRabbit.Tests.DependencyInjection.ServiceCollectionTests
 			adapter.AddTransient<ITestService>(null);
 			var provider = collection.BuildServiceProvider();
 
-			Assert.ThrowsAny<Exception>(() => provider.GetService<ITestService>());
+			Assert.Throws<NullReferenceException>(() => provider.GetService<ITestService>());
 		}
 
 		[Fact]
@@ -103,7 +103,7 @@ namespace RawRabbit.Tests.DependencyInjection.ServiceCollectionTests
 			adapter.AddTransient<ITestService, TestService>(null);
 			var provider = collection.BuildServiceProvider();
 
-			Assert.ThrowsAny<Exception>(() => provider.GetService<ITestService>());
+			Assert.Throws<NullReferenceException>(() => provider.GetService<ITestService>());
 		}
 
 		[Fact]
@@ -158,7 +158,7 @@ namespace RawRabbit.Tests.DependencyInjection.ServiceCollectionTests
 			adapter.AddSingleton<ITestService, TestService>(null);
 			var provider = collection.BuildServiceProvider();
 
-			Assert.ThrowsAny<Exception>(() => provider.GetService<ITestService>());
+			Assert.Throws<NullReferenceException>(() => provider.GetService<ITestService>());
 		}
 
 		[Fact]
@@ -186,7 +186,7 @@ namespace RawRabbit.Tests.DependencyInjection.ServiceCollectionTests
 			adapter.AddSingleton<ITestService>((Func<IDependencyResolver, ITestService>)null);
 			var provider = collection.BuildServiceProvider();
 
-			Assert.ThrowsAny<Exception>(() => provider.GetService<ITestService>());
+			Assert.Throws<NullReferenceException>(() => provider.GetService<ITestService>());
 		}
 
 		[Fact]
@@ -214,7 +214,7 @@ namespace RawRabbit.Tests.DependencyInjection.ServiceCollectionTests
 			adapter.AddSingleton<IAnotherService, AnotherService>();
 			var provider = collection.BuildServiceProvider();
 
-			Assert.ThrowsAny<Exception>(() => provider.GetService<IAnotherService>());
+			Assert.Throws<InvalidOperationException>(() => provider.GetService<IAnotherService>());
 		}
 	}
 }

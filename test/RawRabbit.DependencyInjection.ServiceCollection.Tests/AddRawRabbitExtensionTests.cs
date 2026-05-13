@@ -45,7 +45,7 @@ namespace RawRabbit.Tests.DependencyInjection.ServiceCollectionTests
 		{
 			IServiceCollection collection = null;
 
-			Assert.ThrowsAny<Exception>(() => collection.AddRawRabbit());
+			Assert.Throws<ArgumentNullException>(() => collection.AddRawRabbit());
 		}
 	}
 }
