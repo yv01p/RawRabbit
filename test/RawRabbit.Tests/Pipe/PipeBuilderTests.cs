@@ -4,6 +4,7 @@ using Moq;
 using RawRabbit.DependencyInjection;
 using RawRabbit.Pipe;
 using RawRabbit.Pipe.Middleware;
+using MiddlewareBase = RawRabbit.Pipe.Middleware.Middleware;
 using Xunit;
 
 namespace RawRabbit.Tests.Pipe
@@ -62,7 +63,7 @@ namespace RawRabbit.Tests.Pipe
 		{
 			var resolver = new Mock<IDependencyResolver>();
 			resolver.Setup(r => r.GetService(typeof(TestMiddleware), It.IsAny<object[]>()))
-				.Returns((Middleware)null);
+				.Returns((MiddlewareBase)null);
 
 			var builder = new PipeBuilder(resolver.Object);
 			builder.Use<TestMiddleware>();
@@ -237,7 +238,7 @@ namespace RawRabbit.Tests.Pipe
 		}
 	}
 
-	file class TestMiddleware : Middleware
+	file class TestMiddleware : RawRabbit.Pipe.Middleware.Middleware
 	{
 		public override Task InvokeAsync(IPipeContext context, System.Threading.CancellationToken token = default)
 		{
@@ -245,7 +246,7 @@ namespace RawRabbit.Tests.Pipe
 		}
 	}
 
-	file class ReplacementMiddleware : Middleware
+	file class ReplacementMiddleware : RawRabbit.Pipe.Middleware.Middleware
 	{
 		public override Task InvokeAsync(IPipeContext context, System.Threading.CancellationToken token = default)
 		{
