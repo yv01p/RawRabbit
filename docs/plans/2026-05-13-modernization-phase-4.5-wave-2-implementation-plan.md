@@ -196,7 +196,7 @@ Per F1 = (a): each public method gets ≥1 happy + ≥1 error test individually.
 - [ ] **Step 2: Write `ContainerBuilderExtensionTests.cs`.** 3 tests covering the single `RegisterRawRabbit` extension:
   - `Should_Register_RawRabbit_And_Resolve_BusClient` — happy path; build container; resolve `IBusClient`; assert non-null
   - `Should_Honor_Custom_RawRabbitOptions` — pass non-default `RawRabbitOptions`; verify options reach the configuration
-  - `Should_Throw_ArgumentNullException_When_Builder_Is_Null` — null `ContainerBuilder` → `ArgumentNullException` (extension method called via static syntax)
+  - `Should_Throw_NullReferenceException_When_Builder_Is_Null` — null `ContainerBuilder` → `NullReferenceException` thrown at first deref `builder.RegisterSource(...)` per `src/RawRabbit.DependencyInjection.Autofac/ContainerBuilderExtension.cs:14`; no synchronous null-check on the extension method's `this` parameter (per CIR R2 F1)
 
   Pattern:
   ```csharp
@@ -227,16 +227,16 @@ Per F1 = (a): each public method gets ≥1 happy + ≥1 error test individually.
   ```
 
 - [ ] **Step 3: Write `ContainerBuilderAdapterTests.cs`.** 10 tests covering all 5 `IDependencyRegister` methods (per VP-5):
-  - `AddTransient<TS,TI>(Func)`: Should_Register_Transient_With_Factory + Should_Throw_When_Factory_Is_Null
+  - `AddTransient<TS,TI>(Func)`: Should_Register_Transient_With_Factory + Should_Throw_NullReferenceException_At_Resolution_When_Factory_Is_Null (per CIR R2 F2 — `ContainerBuilderAdapter.cs:16-23` wraps the captured null `instanceCreator` in a non-null lambda; throw deferred to resolve time when the lambda derefs null)
   - `AddTransient<TS,TI>()`: Should_Register_Transient_Without_Factory + Should_Throw_At_Resolution_When_TImplementation_Cannot_Be_Constructed
-  - `AddSingleton<TS>(TService)`: Should_Register_Singleton_Instance + Should_Throw_When_Instance_Is_Null
-  - `AddSingleton<TS,TI>(Func)`: Should_Register_Singleton_With_Factory + Should_Throw_When_Factory_Is_Null
+  - `AddSingleton<TS>(TService)`: Should_Register_Singleton_Instance + Should_Throw_NullReferenceException_At_Resolution_When_Instance_Is_Null (per CIR R2 F2 — `ContainerBuilderAdapter.cs:34-41` stores null instance in a closure; throw deferred to resolve time)
+  - `AddSingleton<TS,TI>(Func)`: Should_Register_Singleton_With_Factory + Should_Throw_NullReferenceException_At_Resolution_When_Factory_Is_Null (per CIR R2 F2 — `ContainerBuilderAdapter.cs:43-50` wraps the captured null `instanceCreator`; throw deferred to resolve time)
   - `AddSingleton<TS,TI>()`: Should_Register_Singleton_Without_Factory + Should_Throw_At_Resolution_When_TImplementation_Cannot_Be_Constructed
 
   Construct `new ContainerBuilderAdapter(new ContainerBuilder())`, call register method, build container, resolve, assert. For singleton lifetime: resolve twice, `Assert.Same`. For transient: resolve twice, `Assert.NotSame`.
 
 - [ ] **Step 4: Write `ComponentContextAdapterTests.cs`.** 6 tests covering 1 static factory + 2 GetService overloads (per VP-6):
-  - `Create` (static): Should_Create_Adapter_Wrapping_Context + Should_Throw_When_Context_Is_Null
+  - `Create` (static): Should_Create_Adapter_Wrapping_Context + Should_Throw_NullReferenceException_On_First_GetService_When_Context_Was_Null (per CIR R2 F2 — `ComponentContextAdapter.cs:12-22` ctor stores null `_context` with no validation; throw deferred to first `GetService` call)
   - `GetService<TService>`: Should_Resolve_Service_Generic + Should_Throw_When_Service_Not_Registered_Generic
   - `GetService(Type)`: Should_Resolve_Service_NonGeneric + Should_Throw_When_Service_Not_Registered_NonGeneric
 
@@ -286,7 +286,7 @@ Per F1 = (a): each public method gets ≥1 happy + ≥1 error test individually.
 - [ ] **Step 2: Write `KernelExtensionTests.cs`.** 3 tests covering `RegisterRawRabbit` (per VP-7):
   - `Should_Register_RawRabbit_And_Resolve_BusClient`
   - `Should_Honor_Custom_RawRabbitOptions` — pass options; verify bound as constant
-  - `Should_Throw_ArgumentNullException_When_Kernel_Is_Null`
+  - `Should_Throw_NullReferenceException_When_Kernel_Is_Null` — null `IKernel` → `NullReferenceException` thrown at first deref of `config` per `src/RawRabbit.DependencyInjection.Ninject/KernelExtension.cs:8-16` (per CIR R2 F1)
 
   Use `new StandardKernel()` from Ninject; call extension; resolve; assert.
 
@@ -332,17 +332,17 @@ This task lands tests in the Wave-1-scaffolded `RawRabbit.DependencyInjection.Se
 - [ ] **Step 1: Write `AddRawRabbitExtensionTests.cs`.** 3 tests covering `AddRawRabbit` (per VP-10):
   - `Should_Register_RawRabbit_And_Resolve_BusClient` — happy
   - `Should_Invoke_Options_DependencyInjection_Callback` — verify `options.DependencyInjection?.Invoke(adapter)` callback is fired with the adapter
-  - `Should_Throw_ArgumentNullException_When_Collection_Is_Null`
+  - `Should_Throw_NullReferenceException_When_Collection_Is_Null` — null `IServiceCollection` → `NullReferenceException` thrown at first deref of `Collection` inside the wired adapter chain (no synchronous null-check in `src/RawRabbit.DependencyInjection.ServiceCollection/AddRawRabbitExtension.cs:8-15` or `ServiceCollectionAdapter.cs:10-13` ctor) (per CIR R2 F1)
 
   Use `new ServiceCollection()`; resolve via `BuildServiceProvider().GetService<IBusClient>()`.
 
 - [ ] **Step 2: Write `ServiceCollectionAdapterTests.cs`.** 14 tests covering 7 `IDependencyRegister` methods (per VP-11):
   - `AddTransient<TS,TI>()`: Should_Register_Transient_Without_Factory + Should_Throw_At_Resolution_When_TImplementation_Cannot_Be_Constructed
-  - `AddTransient<TS>(Func)`: Should_Register_Transient_With_Factory + Should_Throw_When_Factory_Is_Null
-  - `AddTransient<TS,TI>(Func)`: Should_Register_Transient_With_Factory_And_TI + Should_Throw_When_Factory_Is_Null_With_TI
-  - `AddSingleton<TS>(TService instance)`: Should_Register_Singleton_Instance + Should_Throw_When_Instance_Is_Null
-  - `AddSingleton<TS,TI>(Func)`: Should_Register_Singleton_With_Factory_TI + Should_Throw_When_Factory_Is_Null_TI
-  - `AddSingleton<TS>(Func)`: Should_Register_Singleton_With_Factory + Should_Throw_When_Factory_Is_Null
+  - `AddTransient<TS>(Func)`: Should_Register_Transient_With_Factory + Should_Throw_NullReferenceException_At_Resolution_When_Factory_Is_Null (per CIR R2 F2 — `ServiceCollectionAdapter.cs:21-25` wraps the captured null `instanceCreator` in a non-null lambda; throw deferred to resolve time)
+  - `AddTransient<TS,TI>(Func)`: Should_Register_Transient_With_Factory_And_TI + Should_Throw_NullReferenceException_At_Resolution_When_Factory_Is_Null_With_TI (per CIR R2 F2 — `ServiceCollectionAdapter.cs:27-31` same shape)
+  - `AddSingleton<TS>(TService instance)`: Should_Register_Singleton_Instance + Should_Throw_When_Instance_Is_Null (correct as written — MS.DI's `AddSingleton<T>(T implementationInstance)` throws `ArgumentNullException` synchronously; CIR R2 §2 explicitly excluded this line)
+  - `AddSingleton<TS,TI>(Func)`: Should_Register_Singleton_With_Factory_TI + Should_Throw_NullReferenceException_At_Resolution_When_Factory_Is_Null_TI (per CIR R2 F2 — `ServiceCollectionAdapter.cs:39-43` same shape)
+  - `AddSingleton<TS>(Func)`: Should_Register_Singleton_With_Factory + Should_Throw_NullReferenceException_At_Resolution_When_Factory_Is_Null (per CIR R2 F2 — `ServiceCollectionAdapter.cs:45-49` same shape)
   - `AddSingleton<TS,TI>()`: Should_Register_Singleton_Without_Factory + Should_Throw_At_Resolution_When_TImplementation_Cannot_Be_Constructed
 
 - [ ] **Step 3: Write `ServiceProviderAdapterTests.cs`.** 5 tests covering 2 ctors + 2 GetService overloads (per VP-12):
