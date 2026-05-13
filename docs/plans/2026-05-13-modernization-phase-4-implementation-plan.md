@@ -227,15 +227,15 @@ This task is **atomic by build necessity**: removing `Newtonsoft.Json` from `Raw
   using System.Text;
   using System.Text.Json;
   using System.Text.Json.Serialization;
-  using RawRabbit.Serialization;
   using Xunit;
+  using RawRabbitJsonSerializer = RawRabbit.Serialization.JsonSerializer;
 
   namespace RawRabbit.Tests.Serialization
   {
       public class JsonSerializerTests
       {
-          private static JsonSerializer CreateSerializer()
-              => new JsonSerializer(new JsonSerializerOptions
+          private static RawRabbitJsonSerializer CreateSerializer()
+              => new RawRabbitJsonSerializer(new JsonSerializerOptions
               {
                   PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                   DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
