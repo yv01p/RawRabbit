@@ -9,7 +9,7 @@ namespace RawRabbit.Tests.DependencyInjection.Ninject
 	public class RawRabbitModuleTests
 	{
 		[Fact]
-		public void Should_Bind_IDependencyResolver_And_IInstanceFactory_When_Loaded()
+		public void Should_Bind_IDependencyResolver_IInstanceFactory_And_IBusClient_When_Loaded()
 		{
 			var kernel = new StandardKernel();
 
@@ -17,6 +17,7 @@ namespace RawRabbit.Tests.DependencyInjection.Ninject
 
 			Assert.NotNull(kernel.Get<IDependencyResolver>());
 			Assert.NotNull(kernel.Get<IInstanceFactory>());
+			Assert.NotEmpty(kernel.GetBindings(typeof(IBusClient)));
 		}
 
 		[Fact]

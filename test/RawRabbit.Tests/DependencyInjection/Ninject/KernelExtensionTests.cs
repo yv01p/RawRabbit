@@ -1,6 +1,5 @@
 ﻿using System;
 using Ninject;
-using RawRabbit;
 using RawRabbit.Configuration;
 using RawRabbit.DependencyInjection.Ninject;
 using RawRabbit.Instantiation;
@@ -36,7 +35,7 @@ namespace RawRabbit.Tests.DependencyInjection.Ninject
 		}
 
 		[Fact]
-		public void Should_Throw_When_Kernel_Is_Null()
+		public void Should_Throw_ArgumentNullException_When_Kernel_Is_Null()
 		{
 			IKernel kernel = null;
 
