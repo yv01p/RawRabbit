@@ -100,6 +100,25 @@ namespace RawRabbit.Tests.Channel
 			Assert.NotNull(result);
 		}
 
+		[Fact]
+		public async Task Should_Propagate_Exception_When_Factory_Throws_During_GetAsync()
+		{
+			var mockFactory = new Mock<IChannelFactory>();
+			mockFactory.Setup(f => f.CreateChannelAsync(default))
+				.ThrowsAsync(new InvalidOperationException("broker unreachable"));
+			var options = new AutoScalingOptions
+			{
+				MinimunPoolSize = 1,
+				MaximumPoolSize = 10,
+				DesiredAverageWorkload = 100,
+				RefreshInterval = TimeSpan.MaxValue,
+				GracefulCloseInterval = TimeSpan.FromSeconds(30)
+			};
+			var pool = new AutoScalingChannelPool(mockFactory.Object, options);
+
+			await Assert.ThrowsAsync<InvalidOperationException>(() => pool.GetAsync());
+		}
+
 		[Fact(Skip = "Phase 5/7 territory: timer-based scaling assertions are flaky")]
 		public void Should_Setup_Scaling_Timer()
 		{

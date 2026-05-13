@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using RabbitMQ.Client;
@@ -55,6 +56,16 @@ namespace RawRabbit.Tests.Channel
 			var result = await pool.GetAsync();
 
 			Assert.Equal(channel1.Object, result);
+		}
+
+		[Fact]
+		public void Should_Propagate_Exception_When_Factory_Throws_During_Ctor_Seed()
+		{
+			var mockFactory = new Mock<IChannelFactory>();
+			mockFactory.Setup(f => f.CreateChannelAsync(default))
+				.ThrowsAsync(new InvalidOperationException("broker unreachable"));
+
+			Assert.Throws<InvalidOperationException>(() => new ResilientChannelPool(mockFactory.Object, 1));
 		}
 
 		[Fact(Skip = "Phase 5/7 territory: resilient pool recovery requires IRecoverable channel-closure simulation which is complex in unit test context")]
