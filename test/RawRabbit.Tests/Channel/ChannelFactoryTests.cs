@@ -11,6 +11,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Channel
 {
+	[Xunit.Collection("LogProviderState")]
 	public class ChannelFactoryTests
 	{
 		[Fact(Skip = "Phase 5/7 territory: 2-arg ConnectionFactory.CreateConnection signature mismatch with 1-arg mock setups; tests need re-mocking when broker layer is modernized")]

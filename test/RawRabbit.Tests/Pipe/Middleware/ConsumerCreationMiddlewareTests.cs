@@ -13,6 +13,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Pipe.Middleware
 {
+	[Xunit.Collection("LogProviderState")]
 	public class ConsumerCreationMiddlewareTests
 	{
 		[Fact]

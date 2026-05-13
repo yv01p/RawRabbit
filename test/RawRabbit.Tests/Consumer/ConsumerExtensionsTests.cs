@@ -10,6 +10,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Consumer
 {
+	[Xunit.Collection("LogProviderState")]
 	public class ConsumerExtensionsTests
 	{
 		[Fact]

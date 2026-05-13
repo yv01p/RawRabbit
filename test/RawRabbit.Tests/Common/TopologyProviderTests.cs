@@ -13,6 +13,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Common
 {
+	[Xunit.Collection("LogProviderState")]
 	public class TopologyProviderTests
 	{
 		[Fact]

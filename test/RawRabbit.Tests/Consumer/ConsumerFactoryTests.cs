@@ -12,6 +12,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Consumer
 {
+	[Xunit.Collection("LogProviderState")]
 	public class ConsumerFactoryTests
 	{
 		[Fact]

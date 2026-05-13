@@ -12,6 +12,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Channel
 {
+	[Xunit.Collection("LogProviderState")]
 	public class ChannelPoolTests
 	{
 		[Fact]
