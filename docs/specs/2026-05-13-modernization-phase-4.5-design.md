@@ -158,7 +158,7 @@ The **method-name enumeration** for each area is derived during the implementati
 - `Exceptions/`: each custom exception's ctor and serialization round-trip
 - `Instantiation/` + `Instantiation/Disposable/`: bus client instantiation; lifecycle disposal
 - `Logging/`: adapter wiring; log-level filtering
-- `Pipe/`: `StagedPipeBuilder` ordering; `PipeFactory` resolution; `IPipeContext` add/get/remove
+- `Pipe/`: `PipeBuilder` ordering; `PipeBuilderFactory` resolution; `IPipeContext` add/get/remove
 - `Pipe/Middleware/`: per built-in middleware happy + error path
 - `Subscription/`: lifecycle; disposal
 - Root: `BusClient.cs` + `IBusClient.cs` — `BusClient` instantiation, dispose, extension-method dispatch
@@ -199,7 +199,7 @@ Wave 1 is **mandatory-first** (establishes conventions in existing code + scaffo
 | Wave | Scope | Mandatory? | Est. tests added | Est. files added |
 |------|-------|:---:|---:|---:|
 | **1. Quality Foundation + Scaffolding** | A25 cleanup of 7 existing test files; 2 JsonSerializer backfill tests; 3 Phase 4 cosmetics; create 14 new test project skeletons (csproj + ProjectReferences + sln entry; empty test class per project acceptable) | **Yes (first)** | +2 | 14 csprojs |
-| **2. Pure-logic isolated** | 3 DI projects + Common gap-fill + Configuration (+ 7 sub-types) + Exceptions + Logging + Pipe (`StagedPipeBuilder`, `PipeFactory`, `IPipeContext` extension methods) | No (any time after 1) | ~30–50 | ~7–10 |
+| **2. Pure-logic isolated** | 3 DI projects + Common gap-fill + Configuration (+ 7 sub-types) + Exceptions + Logging + Pipe (`PipeBuilder`, `PipeBuilderFactory`, `IPipeContext` extension methods) | No (any time after 1) | ~64–122 | ~10–15 |
 | **3. Pipe/Middleware + Consumer + Subscription + Instantiation + DI core** | Built-in middleware (each happy + error); subscription lifecycle; consumer dispatch (mocked); `BusClient` lifecycle; the core's own `DependencyInjection` extensions; `IPipeContext` mutation surface | No (any time after 1) | ~40–60 | ~10–15 |
 | **4. Operations.\*** | 8 Operations projects via the 8 new test projects: per-middleware + extension method tests; Builder/Stage/Key type tests where present | No (any time after 1) | ~80–120 | ~24–40 |
 | **5. Enrichers** | 5 new enricher test projects + Polly extension: per-middleware + config + extension method tests; Polly adds tests beyond existing 1+2-skip | No (any time after 1) | ~40–60 | ~12–20 |
