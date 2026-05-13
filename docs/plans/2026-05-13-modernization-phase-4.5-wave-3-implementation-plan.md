@@ -63,7 +63,7 @@ Task 3 — `test/RawRabbit.Tests/Consumer/` (NEW dir):
 - `ConsumerExtensionsTests.cs` — `CancelAsync(this IBasicConsumer, CancellationToken)` happy + non-Eventing-consumer throws + token cancellation cancels TCS; `OnMessage(this IBasicConsumer, EventHandler, Predicate?)` happy + non-Eventing throws + abort predicate path
 
 Task 4 — `test/RawRabbit.Tests/Subscription/` (NEW dir):
-- `SubscriptionTests.cs` — ctor `(IBasicConsumer, string)` happy + ctor with `DefaultBasicConsumer` casts and reads ConsumerTag + ctor with non-DefaultBasicConsumer skips QueueName assignment; `Dispose` calls `_consumer.CancelAsync()` when Active + skips when Model.IsOpen=false + skips when Active=false; `Active` setter; `QueueName`/`ConsumerTag` getters
+- `SubscriptionTests.cs` — ctor `(IBasicConsumer, string)` happy + ctor with `DefaultBasicConsumer` (covered via `BrokerMocks.MakeEventingConsumer()` — `EventingBasicConsumer` is a `DefaultBasicConsumer` subclass; cast in ctor reads its ConsumerTag) + ctor with non-`DefaultBasicConsumer` (covered via `Mock<IBasicConsumer>` whose proxy is NOT a DefaultBasicConsumer; cast returns null and ctor skips QueueName/ConsumerTag assignment). **Dispose tests MUST use the real `EventingBasicConsumer` from `BrokerMocks.MakeEventingConsumer()`** (per CIR R1 F2): `_consumer.CancelAsync()` is the extension method at `Consumer/ConsumerFactory.cs:125-145` which casts to `EventingBasicConsumer` and throws `NotSupportedException("Can only cancellation EventBasicConsumer")` on a Moq proxy. Verify Dispose behavior via `Mock<IModel>.Verify(c => c.BasicCancel(<tag>), Times.Once)` (the underlying broker call) — NOT via `Mock<IBasicConsumer>.Verify(c => c.CancelAsync())` (Moq cannot intercept extension methods). Dispose paths covered: when Model.IsOpen=true + Active=true → BasicCancel invoked once; when Model.IsOpen=false → BasicCancel never invoked; idempotency (Dispose × 2) → BasicCancel invoked exactly once. Plus `Active` setter; `QueueName`/`ConsumerTag` getters
 - `SubscriptionRepositoryTests.cs` — parameterless ctor + `Add(ISubscription)` happy + `GetAll()` returns added items + `GetAll()` empty initially + concurrent Add safety (use `Parallel.For` with N=100)
 
 Task 5 — `test/RawRabbit.Tests/Instantiation/` (NEW dir; mirror `Disposable/` subdir):
@@ -449,12 +449,12 @@ No `BrokerMocks` needed — these classes touch `IBasicConsumer` indirectly via 
   mkdir -p test/RawRabbit.Tests/Subscription
   ```
 
-- [ ] **Step 2: Write `SubscriptionTests.cs`.** ~6-8 tests per VP-11:
-  - Ctor `(IBasicConsumer, string queueName)` with `EventingBasicConsumer` (`DefaultBasicConsumer` subclass) — assert `Active=true`, `QueueName` set, `ConsumerTag` set from `basicConsumer.ConsumerTag`
-  - Ctor with non-`DefaultBasicConsumer` — assert `Active=true`, `QueueName=null`, `ConsumerTag=null` (the cast-to-DefaultBasicConsumer at source line 26 returns null for non-Default consumers; ctor early-returns)
-  - `Dispose()` happy — `_consumer.Model.IsOpen=true`, `Active=true` → calls `_consumer.CancelAsync()`, sets `Active=false`
-  - `Dispose()` skips when `_consumer.Model.IsOpen=false` — assert no CancelAsync invocation
-  - `Dispose()` skips when `Active=false` (idempotency) — call Dispose twice; assert CancelAsync invoked only once
+- [ ] **Step 2: Write `SubscriptionTests.cs`.** ~6-8 tests per VP-11. **Per CIR R1 F2:** Dispose tests MUST use real `EventingBasicConsumer` (via `BrokerMocks.MakeEventingConsumer()`); `Mock<IBasicConsumer>` only for the non-DefaultBasicConsumer ctor branch.
+  - Ctor `(IBasicConsumer, string queueName)` with `EventingBasicConsumer` — `var channel = BrokerMocks.MakeChannel(); var consumer = BrokerMocks.MakeEventingConsumer(channel.Object); consumer.HandleBasicConsumeOk("tag1");` then `var sub = new Subscription(consumer, "queue1");` — assert `Active=true`, `QueueName="queue1"`, `ConsumerTag="tag1"`
+  - Ctor with non-`DefaultBasicConsumer` — pass `Mock<IBasicConsumer>().Object`; cast-to-DefaultBasicConsumer at source line 26 returns null for non-Default consumers; ctor early-returns. Assert `Active=true`, `QueueName=null`, `ConsumerTag=null`
+  - `Dispose()` happy — construct with `EventingBasicConsumer + BrokerMocks.MakeChannel()` (channel.IsOpen defaults true via helper), call `sub.Dispose();` — assert `channel.Verify(c => c.BasicCancel("tag1"), Times.Once)` AND `sub.Active` is now false. Verify via the underlying `IModel.BasicCancel` call (the extension method `_consumer.CancelAsync()` casts to `EventingBasicConsumer` and calls `consumer.Model.BasicCancel(consumerTag)`; Moq cannot verify the extension method itself, only the underlying `IModel` call)
+  - `Dispose()` skips when `Model.IsOpen=false` — `channel.Setup(c => c.IsOpen).Returns(false);` then construct + Dispose; assert `channel.Verify(c => c.BasicCancel(It.IsAny<string>()), Times.Never)`
+  - `Dispose()` idempotency — construct + Dispose twice; assert `BasicCancel` invoked exactly once (second call early-returns because `Active=false` after first Dispose)
   - `Active` setter — set false then true; verify state
 
 - [ ] **Step 3: Write `SubscriptionRepositoryTests.cs`.** ~4-5 tests per VP-11:
@@ -512,13 +512,11 @@ Per DW15, `RawRabbitOptions` (pure POCO) gets NO dedicated test file. **Per spec
   - `ShutdownAsync(TimeSpan? graceful=null)` happy with explicit `TimeSpan.FromMilliseconds(10)` — disposes all subscriptions from `ISubscriptionRepository.GetAll()` + delays + Dispose
   - `ShutdownAsync(null)` uses `_resolver.GetService<RawRabbitConfiguration>().GracefulShutdown` — set config to small TimeSpan to keep test fast
 
-- [ ] **Step 4: Write `RawRabbitFactoryTests.cs`.** ~6-8 tests per VP-12. **Critical: do NOT call `Resolve<IBusClient>()` / equivalent path that triggers broker connection.** Use `RawRabbitFactory.CreateInstanceFactory(...)` (returns `InstanceFactory` whose ctor stores resolver — no broker). DO NOT call `.Create()` on the returned factory in test asserts (that triggers broker via the resolved `BusClient` ctor chain — see Wave 2 lesson):
+- [ ] **Step 4: Write `RawRabbitFactoryTests.cs`.** ~4 tests per VP-12. **Critical: do NOT call `Resolve<IBusClient>()` / equivalent path that triggers broker connection.** Use `RawRabbitFactory.CreateInstanceFactory(...)` (returns `InstanceFactory` whose ctor stores resolver — no broker). DO NOT call `.Create()` on the returned factory in test asserts (that triggers broker via the resolved `BusClient` ctor chain — see Wave 2 lesson). **Both `CreateSingleton(...)` overloads omitted from this test file (per CIR R1 F1)**: they construct `Disposable.BusClient` whose ctor calls `instanceFactory.Create()` synchronously at construction time, which resolves `IChannelFactory` whose registration at `RawRabbitDependencyRegisterExtension.cs:57-66` invokes `ConnectAsync().GetAwaiter().GetResult()` — opening a real broker connection inside the test's `new Disposable.BusClient(...)` line. The `Disposable.BusClient` wrapper itself is covered in Step 5's `Disposable/BusClientTests.cs` against `Mock<IInstanceFactory>` (no broker chain):
   - `CreateInstanceFactory(options=null)` returns non-null `InstanceFactory`
   - `CreateInstanceFactory(options-with-Plugins)` invokes `options.Plugins?.Invoke(clientBuilder)` — verify via stub Action that increments counter
   - `CreateInstanceFactory(options-with-DependencyInjection)` invokes `options.DependencyInjection?.Invoke(register)` — verify via stub Action
   - `CreateInstanceFactory(options, register, resolverFunc)` honors custom register — pass mock register; verify .AddRawRabbit was invoked
-  - `CreateSingleton(options=null)` returns non-null `Disposable.BusClient` — but DO NOT then call `InvokeAsync` (that triggers broker via inner BusClient.Create); just assert the wrapper itself was constructed
-  - `CreateSingleton(options, register, resolverFunc)` honors custom register — same shape as InstanceFactory variant
 
 - [ ] **Step 5: Write `Disposable/BusClientTests.cs`.** ~4-5 tests per VP-12:
   - Ctor `(IInstanceFactory)` — `Mock<IInstanceFactory>.Setup(f => f.Create()).Returns(Mock<IBusClient>.Object)` — verify ctor calls `factory.Create()` once
