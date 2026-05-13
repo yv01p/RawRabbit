@@ -1,6 +1,6 @@
 ﻿using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using RabbitMQ.Client;
 using RawRabbit.Channel;
 using RawRabbit.Channel.Abstraction;
@@ -46,19 +46,12 @@ namespace RawRabbit.DependencyInjection
 				.AddSingleton<IChannelPoolFactory, AutoScalingChannelPoolFactory>()
 				.AddSingleton(resolver => AutoScalingOptions.Default)
 				.AddSingleton<IClientPropertyProvider, ClientPropertyProvider>()
-				.AddSingleton<ISerializer>(resolver => new Serialization.JsonSerializer(new Newtonsoft.Json.JsonSerializer
+				.AddSingleton<ISerializer>(resolver => new Serialization.JsonSerializer(new JsonSerializerOptions
 				{
-					TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
-					Formatting = Formatting.None,
-					CheckAdditionalContent = true,
-					ContractResolver = new DefaultContractResolver { NamingStrategy = new CamelCaseNamingStrategy() },
-					ObjectCreationHandling = ObjectCreationHandling.Auto,
-					DefaultValueHandling = DefaultValueHandling.Ignore,
-					TypeNameHandling = TypeNameHandling.Auto,
-					ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
-					MissingMemberHandling = MissingMemberHandling.Ignore,
-					PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-					NullValueHandling = NullValueHandling.Ignore
+					PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+					DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+					PropertyNameCaseInsensitive = true,
+					WriteIndented = false,
 				}))
 				.AddSingleton<IConsumerFactory, ConsumerFactory>()
 				.AddSingleton<IChannelFactory>(resolver =>

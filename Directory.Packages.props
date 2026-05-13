@@ -5,7 +5,6 @@
   <ItemGroup>
     <!-- Library deps (Phases 4/5/7 will bump majors) -->
     <PackageVersion Include="RabbitMQ.Client" Version="5.0.1" />
-    <PackageVersion Include="Newtonsoft.Json" Version="10.0.1" />
     <PackageVersion Include="Polly" Version="5.3.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="1.0.2" />
     <PackageVersion Include="Autofac" Version="4.1.0" />

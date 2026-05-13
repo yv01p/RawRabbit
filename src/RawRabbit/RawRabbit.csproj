@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" />
-    <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
