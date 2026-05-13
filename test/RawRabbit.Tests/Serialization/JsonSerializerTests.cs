@@ -69,7 +69,7 @@ namespace RawRabbit.Tests.Serialization
 		}
 
 		[Fact]
-		public void Should_Deserialize_Pascal_Case_Json_Into_Pascal_Case_Properties()
+		public void Should_Deserialize_Case_Insensitively_Despite_CamelCase_Policy()
 		{
 			var serializer = CreateSerializer();
 			var pascalCaseJson = "{\"FirstName\":\"Ada\",\"LastName\":\"Lovelace\",\"Age\":36}";
@@ -143,6 +143,32 @@ namespace RawRabbit.Tests.Serialization
 			Assert.Equal("application/json", serializer.ContentType);
 		}
 
+		[Fact]
+		public void Should_Pass_Through_Raw_String_Without_Json_Encoding()
+		{
+			var serializer = CreateSerializer();
+
+			var bytes = serializer.Serialize("hello");
+			var roundTripped = (string)serializer.Deserialize(typeof(string), bytes);
+
+			Assert.Equal(Encoding.UTF8.GetBytes("hello"), bytes);
+			Assert.Equal("hello", roundTripped);
+			Assert.NotEqual(Encoding.UTF8.GetBytes("\"hello\""), bytes);
+		}
+
+		[Fact]
+		public void Should_Replace_Existing_Collection_Property_During_Deserialization()
+		{
+			var serializer = CreateSerializer();
+			var json = "{\"items\":[1,2,3]}";
+			var bytes = Encoding.UTF8.GetBytes(json);
+
+			var result = (WithCollection)serializer.Deserialize(typeof(WithCollection), bytes);
+
+			Assert.Equal(new[] { 1, 2, 3 }, result.Items);
+			Assert.Equal(3, result.Items.Count);
+		}
+
 		private static int CountOccurrences(string haystack, string needle)
 		{
 			var count = 0;
@@ -190,5 +216,10 @@ namespace RawRabbit.Tests.Serialization
 	{
 		public string Name { get; set; }
 		public WithCycle Other { get; set; }
+	}
+
+	internal class WithCollection
+	{
+		public List<int> Items { get; set; } = new() { 99 };
 	}
 }
