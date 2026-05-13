@@ -46,10 +46,10 @@ namespace RawRabbit.Enrichers.Polly.Tests.Middleware
 				}), PolicyKeys.QueueDeclare);
 			var middleware = new QueueDeclareMiddleware(topology.Object) {Next = new NoOpMiddleware()};
 
-			/* Test */
+
 			await middleware.InvokeAsync(context);
 
-			/* Assert */
+
 			Assert.True(policyCalled, "Should call policy");
 			Assert.Equal(context, capturedContext[RetryKey.PipeContext]);
 			Assert.Equal(queueDeclaration, capturedContext[RetryKey.QueueDeclaration]);
