@@ -6,6 +6,7 @@ using RabbitMQ.Client;
 using RawRabbit.Channel;
 using RawRabbit.Configuration;
 using RawRabbit.Exceptions;
+using RawRabbit.Tests.TestHelpers;
 using Xunit;
 
 namespace RawRabbit.Tests.Channel
@@ -130,6 +131,52 @@ namespace RawRabbit.Tests.Channel
 			await channelTask;
 
 			Assert.Equal(channel.Object, channelTask.Result);
+		}
+
+		[Fact]
+		public void Should_Construct_Without_Connecting()
+		{
+			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
+
+			var channelFactory = new ChannelFactory(factory.Object, RawRabbitConfiguration.Local);
+
+			factory.Verify(f => f.CreateConnection(It.IsAny<IList<string>>(), It.IsAny<string>()), Times.Never);
+		}
+
+		[Fact]
+		public async Task Should_Open_Connection_On_First_CreateChannelAsync()
+		{
+			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
+			var channelFactory = new ChannelFactory(factory.Object, RawRabbitConfiguration.Local);
+
+			await channelFactory.CreateChannelAsync();
+
+			factory.Verify(f => f.CreateConnection(It.IsAny<IList<string>>(), It.IsAny<string>()), Times.Once);
+		}
+
+		[Fact]
+		public async Task Should_Reuse_Existing_Connection_On_Subsequent_CreateChannelAsync()
+		{
+			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
+			var channelFactory = new ChannelFactory(factory.Object, RawRabbitConfiguration.Local);
+
+			await channelFactory.CreateChannelAsync();
+			await channelFactory.CreateChannelAsync();
+
+			factory.Verify(f => f.CreateConnection(It.IsAny<IList<string>>(), It.IsAny<string>()), Times.Once);
+			conn.Verify(c => c.CreateModel(), Times.Exactly(2));
+		}
+
+		[Fact]
+		public async Task Should_Dispose_Connection_On_Dispose()
+		{
+			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
+			var channelFactory = new ChannelFactory(factory.Object, RawRabbitConfiguration.Local);
+			await channelFactory.CreateChannelAsync();
+
+			channelFactory.Dispose();
+
+			conn.Verify(c => c.Dispose(), Times.Once);
 		}
 	}
 }

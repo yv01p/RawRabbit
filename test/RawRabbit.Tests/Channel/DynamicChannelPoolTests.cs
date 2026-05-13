@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Moq;
 using RabbitMQ.Client;
 using RawRabbit.Channel;
+using RawRabbit.Tests.TestHelpers;
 using Xunit;
 
 namespace RawRabbit.Tests.Channel
@@ -66,6 +67,74 @@ namespace RawRabbit.Tests.Channel
 			Assert.Equal(firstChannel, channels[2].Object);
 			Assert.Equal(secondChannel, channels[2].Object);
 			Assert.Equal(thirdChannel, channels[2].Object);
+		}
+
+		[Fact]
+		public void Should_Construct_With_Empty_Pool_When_Parameterless_Ctor()
+		{
+			var pool = new DynamicChannelPool();
+
+			Assert.NotNull(pool);
+		}
+
+		[Fact]
+		public async Task Should_Add_Channels_Via_Params_Array()
+		{
+			var pool = new DynamicChannelPool();
+			var channel1 = BrokerMocks.MakeChannel();
+			var channel2 = BrokerMocks.MakeChannel();
+
+			pool.Add(channel1.Object, channel2.Object);
+
+			var result1 = await pool.GetAsync();
+			var result2 = await pool.GetAsync();
+			Assert.Equal(channel1.Object, result1);
+			Assert.Equal(channel2.Object, result2);
+		}
+
+		[Fact]
+		public async Task Should_Add_Channels_Via_IEnumerable()
+		{
+			var pool = new DynamicChannelPool();
+			var channel1 = BrokerMocks.MakeChannel();
+			var channel2 = BrokerMocks.MakeChannel();
+
+			pool.Add(new[] { channel1.Object, channel2.Object });
+
+			var result1 = await pool.GetAsync();
+			var result2 = await pool.GetAsync();
+			Assert.Equal(channel1.Object, result1);
+			Assert.Equal(channel2.Object, result2);
+		}
+
+		[Fact]
+		public async Task Should_Remove_N_Channels_Via_Int()
+		{
+			var channel1 = BrokerMocks.MakeChannel();
+			var channel2 = BrokerMocks.MakeChannel();
+			var channel3 = BrokerMocks.MakeChannel();
+			var pool = new DynamicChannelPool(new[] { channel1.Object, channel2.Object, channel3.Object });
+
+			pool.Remove(2);
+
+			var result = await pool.GetAsync();
+			Assert.Equal(channel3.Object, result);
+		}
+
+		[Fact]
+		public async Task Should_Remove_Specific_Channels_Via_Params_Array()
+		{
+			var channel1 = BrokerMocks.MakeChannel();
+			var channel2 = BrokerMocks.MakeChannel();
+			var channel3 = BrokerMocks.MakeChannel();
+			var pool = new DynamicChannelPool(new[] { channel1.Object, channel2.Object, channel3.Object });
+
+			pool.Remove(channel1.Object);
+
+			var result1 = await pool.GetAsync();
+			var result2 = await pool.GetAsync();
+			Assert.Equal(channel2.Object, result1);
+			Assert.Equal(channel3.Object, result2);
 		}
 	}
 }

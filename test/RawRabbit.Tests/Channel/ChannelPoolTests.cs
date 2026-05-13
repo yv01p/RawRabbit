@@ -7,6 +7,7 @@ using Moq;
 using RabbitMQ.Client;
 using RawRabbit.Channel;
 using RawRabbit.Exceptions;
+using RawRabbit.Tests.TestHelpers;
 using Xunit;
 
 namespace RawRabbit.Tests.Channel
@@ -239,6 +240,41 @@ namespace RawRabbit.Tests.Channel
 			{
 				Assert.True(true, e.Message);
 			}
+		}
+
+		[Fact]
+		public void Should_Construct_From_Seed_IModels()
+		{
+			var channel1 = BrokerMocks.MakeChannel();
+			var channel2 = BrokerMocks.MakeChannel();
+
+			var pool = new StaticChannelPool(new[] { channel1.Object, channel2.Object });
+
+			Assert.NotNull(pool);
+		}
+
+		[Fact]
+		public async Task Should_Get_Channel_From_Pool()
+		{
+			var channel1 = BrokerMocks.MakeChannel();
+			var pool = new StaticChannelPool(new[] { channel1.Object });
+
+			var result = await pool.GetAsync();
+
+			Assert.Equal(channel1.Object, result);
+		}
+
+		[Fact]
+		public void Should_Dispose_All_Channels_On_Dispose()
+		{
+			var channel1 = BrokerMocks.MakeChannel();
+			var channel2 = BrokerMocks.MakeChannel();
+			var pool = new StaticChannelPool(new[] { channel1.Object, channel2.Object });
+
+			pool.Dispose();
+
+			channel1.Verify(c => c.Dispose(), Times.Once);
+			channel2.Verify(c => c.Dispose(), Times.Once);
 		}
 	}
 }
