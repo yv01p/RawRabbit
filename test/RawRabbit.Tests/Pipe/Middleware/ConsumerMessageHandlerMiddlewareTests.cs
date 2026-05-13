@@ -44,6 +44,9 @@ namespace RawRabbit.Tests.Pipe.Middleware
 
 			await middleware.InvokeAsync(context, CancellationToken.None);
 
+			nextMock.Verify(n => n.InvokeAsync(context, It.IsAny<CancellationToken>()), Times.Once);
+			consumer.HandleBasicDeliver("tag", 1UL, false, "ex", "rk", null, new byte[] { 0x01 });
+			pipeBuilderFactory.Verify(f => f.Create(It.IsAny<Action<IPipeBuilder>>()), Times.Once);
 		}
 
 		[Fact]

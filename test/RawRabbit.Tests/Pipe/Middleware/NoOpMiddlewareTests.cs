@@ -18,21 +18,18 @@ namespace RawRabbit.Tests.Pipe.Middleware
 
 			await middleware.InvokeAsync(context.Object, CancellationToken.None);
 
-			Assert.True(true);
-
 			context.VerifyNoOtherCalls();
 		}
 
 		[Fact]
-		public async Task Should_Return_Completed_Task()
+		public void Should_Return_Already_Completed_Task()
 		{
 			var middleware = new NoOpMiddleware();
 			var context = new Mock<IPipeContext>();
 
-			await middleware.InvokeAsync(context.Object, CancellationToken.None);
+			var task = middleware.InvokeAsync(context.Object, CancellationToken.None);
 
-			Assert.True(true);
-
+			Assert.True(task.IsCompleted);
 		}
 	}
 }
