@@ -130,13 +130,13 @@ namespace RawRabbit.Tests.Common
 		}
 
 		[Fact]
-		public void Should_Dispose_All_Semaphores()
+		public async Task Should_Dispose_All_Semaphores()
 		{
 			var sut = new ExclusiveLock();
 			var obj1 = new object();
 			var obj2 = new object();
-			sut.AquireAsync(obj1).Wait();
-			sut.AquireAsync(obj2).Wait();
+			await sut.AquireAsync(obj1);
+			await sut.AquireAsync(obj2);
 
 			sut.Dispose();
 
@@ -144,11 +144,11 @@ namespace RawRabbit.Tests.Common
 		}
 
 		[Fact]
-		public void Should_Be_Idempotent_On_Multiple_Dispose()
+		public async Task Should_Be_Idempotent_On_Multiple_Dispose()
 		{
 			var sut = new ExclusiveLock();
 			var obj = new object();
-			sut.AquireAsync(obj).Wait();
+			await sut.AquireAsync(obj);
 
 			sut.Dispose();
 			sut.Dispose();

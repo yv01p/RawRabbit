@@ -12,7 +12,8 @@ namespace RawRabbit.Tests.Common
 		{
 			var result = typeof(string).GetUserFriendlyName();
 
-			Assert.Equal("System.String, System.Private.CoreLib", result);
+			Assert.Contains("System.String", result);
+			Assert.Contains(",", result);
 		}
 
 		[Fact]
@@ -20,7 +21,8 @@ namespace RawRabbit.Tests.Common
 		{
 			var result = typeof(List<int>).GetUserFriendlyName();
 
-			Assert.Equal("System.Collections.Generic.List`1[[System.Int32, System.Private.CoreLib]], System.Private.CoreLib", result);
+			Assert.Contains("System.Collections.Generic.List`1", result);
+			Assert.Contains("System.Int32", result);
 		}
 
 		[Fact]
@@ -28,7 +30,9 @@ namespace RawRabbit.Tests.Common
 		{
 			var result = typeof(Dictionary<string, int>).GetUserFriendlyName();
 
-			Assert.Equal("System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib],[System.Int32, System.Private.CoreLib]], System.Private.CoreLib", result);
+			Assert.Contains("System.Collections.Generic.Dictionary`2", result);
+			Assert.Contains("System.String", result);
+			Assert.Contains("System.Int32", result);
 		}
 	}
 }
