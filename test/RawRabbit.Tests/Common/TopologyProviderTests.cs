@@ -431,5 +431,81 @@ namespace RawRabbit.Tests.Common
 				routingKey,
 				arguments), Times.Once);
 		}
+
+		[Fact]
+		public async Task DeclareExchangeAsync_Should_Propagate_Broker_Exception()
+		{
+			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
+			var channelFactory = new Mock<IChannelFactory>();
+			channelFactory.Setup(f => f.CreateChannelAsync(It.IsAny<CancellationToken>()))
+				.ReturnsAsync(channel.Object);
+			channel.Setup(c => c.ExchangeDeclare(
+				It.IsAny<string>(),
+				It.IsAny<string>(),
+				It.IsAny<bool>(),
+				It.IsAny<bool>(),
+				It.IsAny<IDictionary<string, object>>()))
+				.Throws(new InvalidOperationException("broker rejected exchange"));
+			var topology = new TopologyProvider(channelFactory.Object);
+			var exchange = new ExchangeDeclaration { Name = "bad", ExchangeType = "topic" };
+
+			await Assert.ThrowsAsync<InvalidOperationException>(() => topology.DeclareExchangeAsync(exchange));
+		}
+
+		[Fact]
+		public async Task DeclareQueueAsync_Should_Propagate_Broker_Exception()
+		{
+			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
+			var channelFactory = new Mock<IChannelFactory>();
+			channelFactory.Setup(f => f.CreateChannelAsync(It.IsAny<CancellationToken>()))
+				.ReturnsAsync(channel.Object);
+			channel.Setup(c => c.QueueDeclare(
+				It.IsAny<string>(),
+				It.IsAny<bool>(),
+				It.IsAny<bool>(),
+				It.IsAny<bool>(),
+				It.IsAny<IDictionary<string, object>>()))
+				.Throws(new InvalidOperationException("broker rejected queue"));
+			var topology = new TopologyProvider(channelFactory.Object);
+			var queue = new QueueDeclaration { Name = "bad" };
+
+			await Assert.ThrowsAsync<InvalidOperationException>(() => topology.DeclareQueueAsync(queue));
+		}
+
+		[Fact]
+		public async Task BindQueueAsync_Should_Propagate_Broker_Exception()
+		{
+			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
+			var channelFactory = new Mock<IChannelFactory>();
+			channelFactory.Setup(f => f.CreateChannelAsync(It.IsAny<CancellationToken>()))
+				.ReturnsAsync(channel.Object);
+			channel.Setup(c => c.QueueBind(
+				It.IsAny<string>(),
+				It.IsAny<string>(),
+				It.IsAny<string>(),
+				It.IsAny<IDictionary<string, object>>()))
+				.Throws(new InvalidOperationException("broker rejected bind"));
+			var topology = new TopologyProvider(channelFactory.Object);
+
+			await Assert.ThrowsAsync<InvalidOperationException>(() => topology.BindQueueAsync("q", "ex", "rk", null));
+		}
+
+		[Fact]
+		public async Task UnbindQueueAsync_Should_Propagate_Broker_Exception()
+		{
+			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
+			var channelFactory = new Mock<IChannelFactory>();
+			channelFactory.Setup(f => f.CreateChannelAsync(It.IsAny<CancellationToken>()))
+				.ReturnsAsync(channel.Object);
+			channel.Setup(c => c.QueueUnbind(
+				It.IsAny<string>(),
+				It.IsAny<string>(),
+				It.IsAny<string>(),
+				It.IsAny<IDictionary<string, object>>()))
+				.Throws(new InvalidOperationException("broker rejected unbind"));
+			var topology = new TopologyProvider(channelFactory.Object);
+
+			await Assert.ThrowsAsync<InvalidOperationException>(() => topology.UnbindQueueAsync("q", "ex", "rk", null));
+		}
 	}
 }
