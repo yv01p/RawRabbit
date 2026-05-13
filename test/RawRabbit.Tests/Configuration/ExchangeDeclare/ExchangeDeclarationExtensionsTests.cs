@@ -1,4 +1,4 @@
-﻿﻿using RawRabbit.Configuration.Exchange;
+﻿using RawRabbit.Configuration.Exchange;
 using Xunit;
 
 namespace RawRabbit.Tests.Configuration.ExchangeDeclare

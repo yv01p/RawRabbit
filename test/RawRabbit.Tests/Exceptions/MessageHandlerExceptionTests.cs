@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿using System;
 using RawRabbit.Exceptions;
 using Xunit;
 

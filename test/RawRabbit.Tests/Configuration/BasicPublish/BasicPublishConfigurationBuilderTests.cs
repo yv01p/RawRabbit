@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Framing;
 using RawRabbit.Configuration.BasicPublish;

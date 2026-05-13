@@ -1,4 +1,4 @@
-﻿﻿using RawRabbit.Configuration;
+﻿using RawRabbit.Configuration;
 using RawRabbit.Configuration.Exchange;
 using Xunit;
 

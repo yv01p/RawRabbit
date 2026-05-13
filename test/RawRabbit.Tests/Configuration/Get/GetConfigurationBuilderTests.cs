@@ -1,4 +1,4 @@
-﻿﻿using RawRabbit.Configuration.Get;
+﻿using RawRabbit.Configuration.Get;
 using Xunit;
 
 namespace RawRabbit.Tests.Configuration.Get

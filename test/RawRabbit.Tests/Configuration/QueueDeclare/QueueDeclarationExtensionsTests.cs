@@ -1,4 +1,4 @@
-﻿﻿using RawRabbit.Configuration.Queue;
+﻿using RawRabbit.Configuration.Queue;
 using Xunit;
 
 namespace RawRabbit.Tests.Configuration.QueueDeclare

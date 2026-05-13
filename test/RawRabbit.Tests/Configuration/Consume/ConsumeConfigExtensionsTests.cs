@@ -1,4 +1,4 @@
-﻿﻿using RawRabbit.Configuration.Consume;
+﻿using RawRabbit.Configuration.Consume;
 using Xunit;
 
 namespace RawRabbit.Tests.Configuration.Consume
