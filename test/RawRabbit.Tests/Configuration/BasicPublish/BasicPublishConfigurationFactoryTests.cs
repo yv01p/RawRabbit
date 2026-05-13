@@ -15,7 +15,7 @@ namespace RawRabbit.Tests.Configuration.BasicPublish
 		{
 			public Func<Type, string> ExchangeNamingConvention { get; set; } = _ => "test-exchange";
 			public Func<Type, string> QueueNamingConvention { get; set; } = _ => "test-queue";
-			public Func<Type, string> RoutingKeyConvention { get; set; } = _ => "routing.key";
+			public Func<Type, string> RoutingKeyConvention { get; set; } = _ => "test.routing.key";
 			public Func<string> ErrorExchangeNamingConvention { get; set; } = () => "error-exchange";
 			public Func<TimeSpan, string> RetryLaterExchangeConvention { get; set; } = _ => "retry-exchange";
 			public Func<string, TimeSpan, string> RetryLaterQueueNameConvetion { get; set; } = (_, __) => "retry-queue";
@@ -38,7 +38,7 @@ namespace RawRabbit.Tests.Configuration.BasicPublish
 			Assert.NotNull(result);
 			Assert.NotNull(result.Body);
 			Assert.Equal(new byte[] { 1, 2, 3 }, result.Body);
-			Assert.Equal("routing.key", result.RoutingKey);
+			Assert.Equal("test.routing.key", result.RoutingKey);
 			Assert.Equal("test-exchange", result.ExchangeName);
 		}
 
@@ -69,7 +69,7 @@ namespace RawRabbit.Tests.Configuration.BasicPublish
 			var result = factory.Create(typeof(TestMessage));
 
 			Assert.NotNull(result);
-			Assert.Equal("routing.key", result.RoutingKey);
+			Assert.Equal("test.routing.key", result.RoutingKey);
 			Assert.Equal("test-exchange", result.ExchangeName);
 			Assert.False(result.Mandatory);
 		}

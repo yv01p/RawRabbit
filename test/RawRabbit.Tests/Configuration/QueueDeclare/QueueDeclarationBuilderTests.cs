@@ -12,7 +12,8 @@ namespace RawRabbit.Tests.Configuration.QueueDeclare
 			var builder = new QueueDeclarationBuilder(null);
 
 			Assert.NotNull(builder.Declaration);
-			Assert.Same(QueueDeclaration.Default.GetType(), builder.Declaration.GetType());
+			Assert.Equal(QueueDeclaration.Default.Name, builder.Declaration.Name);
+			Assert.Equal(QueueDeclaration.Default.Durable, builder.Declaration.Durable);
 		}
 
 		[Fact]

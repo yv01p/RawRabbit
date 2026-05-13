@@ -9,17 +9,16 @@ namespace RawRabbit.Tests.Configuration.ExchangeDeclare
 {
 	public class ExchangeDeclarationFactoryTests
 	{
-	class TestNamingConventions : INamingConventions
-	{
-		public Func<Type, string> ExchangeNamingConvention { get; set; } = _ => "test-exchange";
-		public Func<Type, string> QueueNamingConvention { get; set; } = _ => "test-queue";
-		public Func<Type, string> RoutingKeyConvention { get; set; } = _ => "test.routing.key";
-		public Func<string> ErrorExchangeNamingConvention { get; set; } = () => "error-exchange";
-		public Func<TimeSpan, string> RetryLaterExchangeConvention { get; set; } = _ => "retry-exchange";
-		public Func<string, TimeSpan, string> RetryLaterQueueNameConvetion { get; set; } = (_, __) => "retry-queue";
-		public Func<Type, string> SubscriberQueueSuffix { get; set; } = _ => "";
-	}
-
+		class TestNamingConventions : INamingConventions
+		{
+			public Func<Type, string> ExchangeNamingConvention { get; set; } = _ => "test-exchange";
+			public Func<Type, string> QueueNamingConvention { get; set; } = _ => "test-queue";
+			public Func<Type, string> RoutingKeyConvention { get; set; } = _ => "test.routing.key";
+			public Func<string> ErrorExchangeNamingConvention { get; set; } = () => "error-exchange";
+			public Func<TimeSpan, string> RetryLaterExchangeConvention { get; set; } = _ => "retry-exchange";
+			public Func<string, TimeSpan, string> RetryLaterQueueNameConvetion { get; set; } = (_, __) => "retry-queue";
+			public Func<Type, string> SubscriberQueueSuffix { get; set; } = _ => "";
+		}
 
 		[Fact]
 		public void Should_Create_From_Name_With_Config_Defaults()
