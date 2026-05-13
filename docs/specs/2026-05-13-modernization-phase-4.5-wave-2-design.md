@@ -6,7 +6,7 @@
 - §1 in/out-of-scope source areas; §2 test project structure (D8); §3 conventions; §4 A25 forbidden patterns; §5 per-area gate format; §6 wave structure (Wave 2 row); §7 phase-wide acceptance; §8 decisions D1–D10; §9 risks; §10 validation shape; §13 known-issues acknowledgements.
 - Wave 1 lessons (BOM preservation, AAA-deletion style, `Assert.ThrowsAnyAsync` for subclass cancellations) — captured as conventions in §3 below.
 
-**Goal:** After Wave 2 ships, the 8 sub-areas listed in §1 each have ≥1 happy + ≥1 error path test per public method (per §1 strict-granularity decision). Wave 2 lands ~64-122 net-new passing tests across 5 source areas (DI ×3, Common gap-fill, Configuration + 7 sub-types, Exceptions, Logging, Pipe). Wave 2 introduces zero new mocking patterns beyond the parent spec's D3; pure-logic isolation means most tests construct objects directly and assert on output, with `Mock<IPipeContext>` reserved for the Pipe extension methods that consume one.
+**Goal:** After Wave 2 ships, the 8 sub-areas listed in §1 each have ≥1 happy + ≥1 error path test per public method (per §1 strict-granularity decision). Wave 2 lands ~88-168 net-new passing tests across 5 source areas (DI ×3, Common gap-fill, Configuration + 7 sub-types, Exceptions, Logging, Pipe). Wave 2 introduces zero new mocking patterns beyond the parent spec's D3; pure-logic isolation means most tests construct objects directly and assert on output, with `Mock<IPipeContext>` reserved for the Pipe extension methods that consume one.
 
 **Tech stack (inherited):** .NET 10 SDK 10.0.107 + C# 13; xUnit 2.9.3; xunit.runner.visualstudio 2.8.2; Microsoft.NET.Test.Sdk 18.5.1; Moq 4.20.72. No new package dependencies for Wave 2.
 
