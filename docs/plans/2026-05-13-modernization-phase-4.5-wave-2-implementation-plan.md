@@ -725,9 +725,9 @@ Per FD-Plan-1 (F1 strict per-method): each of 23 GetXxx extensions gets ≥1 hap
 - [ ] **Step 2: Write `PipeBuilderTests.cs`.** 12 tests covering 5 IPipeBuilder methods + Build (per VP-42):
   - `Use(Func)`: Should_Wrap_Handler_In_UseHandlerMiddleware + Should_Defer_Null_Handler_Until_Build_Resolves_Middleware (per CIR R1 F4 — `Use(null)` does not throw at call time per `src/RawRabbit/Pipe/PipeBuilder.cs:38-42`; throw surfaces at `Build()` when resolver attempts to construct `UseHandlerMiddleware`)
   - `Use<TMW>(args)`: Should_Add_Middleware_With_Args + Should_Defer_Unresolvable_Type_Until_Build (per CIR R1 F4 — `Use<TMW>(args)` does not throw at call time per `src/RawRabbit/Pipe/PipeBuilder.cs:44-52`; throw surfaces at `Build()` via `_resolver.GetService(...)` at line 135)
-  - `Replace<TC,TN>(predicate, args)`: Should_Replace_Matching_Middleware_With_Args + Should_Skip_When_No_Match
+  - `Replace<TC,TN>(predicate, args)`: Should_Replace_Matching_Middleware_With_Args + Should_Skip_When_Replace_No_Match
   - `Replace<TC,TN>(predicate, argsFunc)`: Should_Replace_Via_ArgsFunc + Should_Use_Null_ArgsFunc_When_Not_Provided
-  - `Remove<TMW>(predicate)`: Should_Remove_Matching_Middleware + Should_Skip_When_No_Match
+  - `Remove<TMW>(predicate)`: Should_Remove_Matching_Middleware + Should_Skip_When_Remove_No_Match
   - `Build()`: Should_Sort_Staged_Middleware_By_Marker + Should_Wrap_With_Cancellation_And_NoOp_Middleware
 
   Mock `IDependencyResolver`; resolver.GetService for `Action<IPipeBuilder>` returns null (default) or non-null per test.
