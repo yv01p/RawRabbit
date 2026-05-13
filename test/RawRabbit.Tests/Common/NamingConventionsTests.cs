@@ -1,4 +1,4 @@
-using RawRabbit.Common;
+﻿using RawRabbit.Common;
 using Xunit;
 
 namespace RawRabbit.Tests.Common
