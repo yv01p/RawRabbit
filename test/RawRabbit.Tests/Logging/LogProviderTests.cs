@@ -7,6 +7,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Logging
 {
+	[Collection("LogProviderState")]
 	public class LogProviderTests : IDisposable
 	{
 		public LogProviderTests()

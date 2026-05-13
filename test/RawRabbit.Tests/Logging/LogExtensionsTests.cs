@@ -7,6 +7,7 @@ using Xunit;
 
 namespace RawRabbit.Tests.Logging
 {
+	[Collection("LogProviderState")]
 	public class LogExtensionsTests : IDisposable
 	{
 		private readonly Mock<ILoggerFactory> _mockFactory = new Mock<ILoggerFactory>();
