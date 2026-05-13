@@ -201,6 +201,7 @@ Per F1 = (a): each public method gets ≥1 happy + ≥1 error test individually.
   Pattern:
   ```csharp
   using Autofac;
+  using RawRabbit;
   using RawRabbit.DependencyInjection.Autofac;
   using RawRabbit.Instantiation;
   using Xunit;
@@ -227,10 +228,10 @@ Per F1 = (a): each public method gets ≥1 happy + ≥1 error test individually.
 
 - [ ] **Step 3: Write `ContainerBuilderAdapterTests.cs`.** 10 tests covering all 5 `IDependencyRegister` methods (per VP-5):
   - `AddTransient<TS,TI>(Func)`: Should_Register_Transient_With_Factory + Should_Throw_When_Factory_Is_Null
-  - `AddTransient<TS,TI>()`: Should_Register_Transient_Without_Factory + Should_Throw_When_Type_Resolution_Fails
+  - `AddTransient<TS,TI>()`: Should_Register_Transient_Without_Factory + Should_Throw_At_Resolution_When_TImplementation_Cannot_Be_Constructed
   - `AddSingleton<TS>(TService)`: Should_Register_Singleton_Instance + Should_Throw_When_Instance_Is_Null
   - `AddSingleton<TS,TI>(Func)`: Should_Register_Singleton_With_Factory + Should_Throw_When_Factory_Is_Null
-  - `AddSingleton<TS,TI>()`: Should_Register_Singleton_Without_Factory + Should_Throw_When_Type_Resolution_Fails
+  - `AddSingleton<TS,TI>()`: Should_Register_Singleton_Without_Factory + Should_Throw_At_Resolution_When_TImplementation_Cannot_Be_Constructed
 
   Construct `new ContainerBuilderAdapter(new ContainerBuilder())`, call register method, build container, resolve, assert. For singleton lifetime: resolve twice, `Assert.Same`. For transient: resolve twice, `Assert.NotSame`.
 
@@ -297,7 +298,7 @@ Per F1 = (a): each public method gets ≥1 happy + ≥1 error test individually.
 
 - [ ] **Step 4: Write `RawRabbitModuleTests.cs`.** 2 tests covering the `Load()` override (per VP-9):
   - `Should_Bind_IDependencyResolver_IInstanceFactory_IBusClient_When_Loaded` — happy: load module into kernel; resolve all 3 bindings
-  - `Should_Throw_When_RawRabbitOptions_Not_Bound` — error: load module without binding `RawRabbitOptions` first; verify resolution of `IInstanceFactory` throws (since `context.Kernel.Get<RawRabbitOptions>()` will fail)
+  - `Should_Bind_IInstanceFactory_That_Resolves_With_Default_Options_When_RawRabbitOptions_Unbound` — Ninject auto-self-binds parameterless-ctor types; per `src/RawRabbit/Instantiation/RawRabbitOptions.cs:7-12` (implicit parameterless ctor + 3 nullable property setters) `kernel.Get<RawRabbitOptions>()` returns `new RawRabbitOptions()` rather than throwing `ActivationException`. Load module without binding `RawRabbitOptions`; resolve `IInstanceFactory`; assert non-null factory configured with default-shaped options. (Per CIR R1 F1.)
 
 - [ ] **Step 5: Restore BOMs on the 3 new files.** Same pattern as Task 1 Step 5.
 
@@ -336,13 +337,13 @@ This task lands tests in the Wave-1-scaffolded `RawRabbit.DependencyInjection.Se
   Use `new ServiceCollection()`; resolve via `BuildServiceProvider().GetService<IBusClient>()`.
 
 - [ ] **Step 2: Write `ServiceCollectionAdapterTests.cs`.** 14 tests covering 7 `IDependencyRegister` methods (per VP-11):
-  - `AddTransient<TS,TI>()`: Should_Register_Transient_Without_Factory + Should_Throw_When_Type_Resolution_Fails
+  - `AddTransient<TS,TI>()`: Should_Register_Transient_Without_Factory + Should_Throw_At_Resolution_When_TImplementation_Cannot_Be_Constructed
   - `AddTransient<TS>(Func)`: Should_Register_Transient_With_Factory + Should_Throw_When_Factory_Is_Null
   - `AddTransient<TS,TI>(Func)`: Should_Register_Transient_With_Factory_And_TI + Should_Throw_When_Factory_Is_Null_With_TI
   - `AddSingleton<TS>(TService instance)`: Should_Register_Singleton_Instance + Should_Throw_When_Instance_Is_Null
   - `AddSingleton<TS,TI>(Func)`: Should_Register_Singleton_With_Factory_TI + Should_Throw_When_Factory_Is_Null_TI
   - `AddSingleton<TS>(Func)`: Should_Register_Singleton_With_Factory + Should_Throw_When_Factory_Is_Null
-  - `AddSingleton<TS,TI>()`: Should_Register_Singleton_Without_Factory + Should_Throw_When_Type_Resolution_Fails
+  - `AddSingleton<TS,TI>()`: Should_Register_Singleton_Without_Factory + Should_Throw_At_Resolution_When_TImplementation_Cannot_Be_Constructed
 
 - [ ] **Step 3: Write `ServiceProviderAdapterTests.cs`.** 5 tests covering 2 ctors + 2 GetService overloads (per VP-12):
   - `Should_Self_Register_When_Constructed_From_Collection` — second ctor registers self as `IDependencyResolver` singleton
@@ -385,7 +386,7 @@ This task lands tests in the Wave-1-scaffolded `RawRabbit.DependencyInjection.Se
 - [ ] **Step 1: Write `ClientPropertyProviderTests.cs`.** 3 tests covering `GetClientProperties` (per VP-13 + VP-14):
   - `Should_Return_5_Base_Properties_When_Config_Null` — keys: product, version, platform, client_directory, client_server. Note per VP-14: `Assembly.CodeBase` is obsolete on .NET 5+. Test asserts presence of "client_directory" key but does NOT assert exact value (CodeBase may return null on single-file deploys; for normal test runs returns a `file://` URI). Use `Assert.Contains("client_directory", result.Keys)` not `Assert.Equal(expected, result["client_directory"])`.
   - `Should_Add_2_More_Properties_When_Config_Provided` — keys: request_timeout, broker_username
-  - `Should_Throw_ArgumentNullException_When_Adding_Headers_Property_Twice` — error path when called sequentially with same instance? No — re-read: `GetClientProperties` returns a fresh `Dictionary<string, object>` each call. There is no error path. Adjust to: **`Should_Format_RequestTimeout_As_General_TimeSpan`** — verify `cfg.RequestTimeout.ToString("g")` format. Plan note: the strict-error path doesn't exist; for "error" coverage substitute property-shape verification (request_timeout format, broker_username equals cfg.Username).
+  - `Should_Format_RequestTimeout_As_General_TimeSpan` — verify `request_timeout` value equals `cfg.RequestTimeout.ToString("g")` and `broker_username` equals `cfg.Username`. (No synchronous error path exists for `GetClientProperties` — it returns a fresh `Dictionary<string, object>` each call; this property-shape verification is the negative-coverage substitute. Per CIR R1 F2.)
 
 - [ ] **Step 2: Write `ExclusiveLockTests.cs`.** 10 tests covering `ExclusiveLock` (per VP-15):
   - `AquireAsync(object, CancellationToken)`: Should_Acquire_Lock_For_New_Object + Should_Cancel_When_Token_Cancelled (use `Assert.ThrowsAnyAsync<OperationCanceledException>` per Wave 1 lesson)
@@ -393,6 +394,8 @@ This task lands tests in the Wave-1-scaffolded `RawRabbit.DependencyInjection.Se
   - `Execute<T>(T, Action<T>, CancellationToken)`: Should_Execute_Action_Synchronously + Should_Log_Exception_Without_Throwing_When_Action_Throws (Execute catches exceptions and logs; verify via mock `ILog`? But `_logger = LogProvider.For<ExclusiveLock>()` — use `LogProvider.LoggerFactory` setter to install a captured-output factory; reset after)
   - `ExecuteAsync<T>(T, Func<T,Task>, CancellationToken)`: Should_ExecuteAsync_Async_Func + Should_Log_Exception_Without_Throwing_When_Func_Throws
   - `Dispose`: Should_Dispose_All_Semaphores + Should_Be_Idempotent_On_Multiple_Dispose
+
+  **Mock-ordering note (per CIR R1 F3):** For the two log-on-throw tests above (`Should_Log_Exception_Without_Throwing_When_Action_Throws`, `Should_Log_Exception_Without_Throwing_When_Func_Throws`), set `LogProvider.LoggerFactory = mockFactory.Object` BEFORE constructing `ExclusiveLock`. The `_logger` field is captured at instance ctor at `src/RawRabbit/Common/ExclusiveLock.cs:21` — setting `LoggerFactory` afterward leaves `_logger` pointing at the default `NullLoggerFactory` and the mock receives zero dispatched calls. Use the `IDisposable` test-class pattern from Task 7 Step 2 with explicit ordering: ctor sets the LoggerFactory, then constructs the SUT; `Dispose()` resets to `NullLoggerFactory.Instance`.
 
 - [ ] **Step 3: Write `IDictionaryExtensionsTests.cs`.** 2 tests covering `GetOrDefault<TKey,TValue>` (per VP-16):
   - `Should_Return_Value_When_Key_Exists` — happy
@@ -720,8 +723,8 @@ Per FD-Plan-1 (F1 strict per-method): each of 23 GetXxx extensions gets ≥1 hap
   ```
 
 - [ ] **Step 2: Write `PipeBuilderTests.cs`.** 12 tests covering 5 IPipeBuilder methods + Build (per VP-42):
-  - `Use(Func)`: Should_Wrap_Handler_In_UseHandlerMiddleware + Should_Throw_When_Handler_Is_Null
-  - `Use<TMW>(args)`: Should_Add_Middleware_With_Args + Should_Throw_When_Resolver_Cannot_Resolve_Type
+  - `Use(Func)`: Should_Wrap_Handler_In_UseHandlerMiddleware + Should_Defer_Null_Handler_Until_Build_Resolves_Middleware (per CIR R1 F4 — `Use(null)` does not throw at call time per `src/RawRabbit/Pipe/PipeBuilder.cs:38-42`; throw surfaces at `Build()` when resolver attempts to construct `UseHandlerMiddleware`)
+  - `Use<TMW>(args)`: Should_Add_Middleware_With_Args + Should_Defer_Unresolvable_Type_Until_Build (per CIR R1 F4 — `Use<TMW>(args)` does not throw at call time per `src/RawRabbit/Pipe/PipeBuilder.cs:44-52`; throw surfaces at `Build()` via `_resolver.GetService(...)` at line 135)
   - `Replace<TC,TN>(predicate, args)`: Should_Replace_Matching_Middleware_With_Args + Should_Skip_When_No_Match
   - `Replace<TC,TN>(predicate, argsFunc)`: Should_Replace_Via_ArgsFunc + Should_Use_Null_ArgsFunc_When_Not_Provided
   - `Remove<TMW>(predicate)`: Should_Remove_Matching_Middleware + Should_Skip_When_No_Match
@@ -779,7 +782,7 @@ Per FD-Plan-1 (F1 strict per-method): each of 23 GetXxx extensions gets ≥1 hap
 
 - [ ] **Step 7: Write `AddPropertyPipeContextExtensionsTests.cs`.** 6 tests covering 3 extensions (per VP-40):
   - `UseConsumerConcurrency(uint)`: Should_Add_Throttle_Action_To_Properties + Should_Throw_ArgumentOutOfRange_When_Concurrency_Zero
-  - `UseConsumeSemaphore(SemaphoreSlim)`: Should_Add_Throttle_Action_From_Semaphore + Should_Throw_When_Semaphore_Is_Null
+  - `UseConsumeSemaphore(SemaphoreSlim)`: Should_Add_Throttle_Action_From_Semaphore + Should_Carry_Through_Null_Semaphore_To_Stored_Action_Without_Synchronous_Throw (per CIR R1 F5 — semaphore is captured in the deferred delegate per `src/RawRabbit/Pipe/AddPropertyPipeContextExtensions.cs:15-24`; no synchronous null-deref at call time)
   - `UseThrottledConsume(Action)`: Should_Add_Throttle_Action_Directly + Should_Skip_When_Key_Already_Present (TryAdd returns false)
 
 - [ ] **Step 8: Write `DictionaryExtensionsTests.cs`.** 4 tests covering 2 extensions (per VP-41):
