@@ -335,7 +335,7 @@ This is the largest cleanup file (357 lines, 14 tests, all NON-SKIPPED). It's al
 - [ ] **Step 2: Consolidate 12 similar tests via `[Theory]/[InlineData]`.** Tests 1–12 share the input shape (single `connectionString` string → multiple `Assert.Equal` on parsed config fields). Group into `[Theory]` clusters. Suggested grouping (implementer may adjust if a finer grouping reads more naturally; minimum: ≥1 `[Theory]` use in this file per spec §7 condition 7):
 
   - **Cluster A — credentials/no-credentials × port-or-no × virtualhost-or-no** (single-host variants): tests 1, 2, 3, 5, 6, 7, 8, 9 → 1 `[Theory]` with 8 `[InlineData]` rows. Parameters: `(string connectionString, string expectedUsername, string expectedPassword, string expectedVirtualHost, string expectedHost, int expectedPort)`.
-  - **Cluster B — multi-host with parameters**: tests 4, 10, 11, 12 → 1 `[Theory]` with 4 `[InlineData]` rows. Parameters include the 7 timing/recovery flag fields. Hosts asserted as `[expectedHost1, expectedHost2]`.
+  - **Cluster B — multi-host with parameters (REQUIRED bool-parameterization per CIR R1 §2 Finding 2)**: tests 4, 10, 11, 12, 13 → 1 `[Theory]` with 5 `[InlineData]` rows. Theory signature MUST include 4 `bool` parameters (`autoClose`, `persistDelivery`, `autoRecovery`, `topoRecovery`) so the consolidated body can use parameterized assertions (`Assert.Equal(autoClose, config.AutoCloseConnection)` etc. — these don't fire xUnit2004) instead of the original `Assert.Equal(expected: false, actual: config.AutoCloseConnection)` literal-bool form. This naturally cleans up the 20 xUnit2004 hits at original lines 86-89, 207-210, 239-242, 271-274, 303-306 (5 tests × 4 boolean-flag assertions). Hosts asserted as `[expectedHost1, expectedHost2]`. Test #13 (`Should_Be_Able_To_Parse_ConnectionString_Without_VirtualHost_And_Port_With_Parameters`) is in cluster B per this fix (multi-host + parameters; was previously unassigned).
 
   Method body for cluster A:
 
@@ -361,7 +361,42 @@ This is the largest cleanup file (357 lines, 14 tests, all NON-SKIPPED). It's al
   }
   ```
 
-  For cluster B, similar shape with the parameter-string fields included.
+  Method body for cluster B (5 rows, with 4 bool parameters per CIR R1 §2 Finding 2):
+
+  ```csharp
+  [Theory]
+  [InlineData("host1,host2?requestTimeout=10&publishConfirmTimeout=20&recoveryInterval=30&autoCloseConnection=false&persistentDeliveryMode=false&automaticRecovery=false&topologyRecovery=false",
+      "guest", "guest", "/", "host1", "host2", 5672, false, false, false, false)]
+  [InlineData("username:password@host1,host2:1234?requestTimeout=10&publishConfirmTimeout=20&recoveryInterval=30&autoCloseConnection=false&persistentDeliveryMode=false&automaticRecovery=false&topologyRecovery=false",
+      "username", "password", "/", "host1", "host2", 1234, false, false, false, false)]
+  [InlineData("username:password@host1,host2:1234/virtualHost?requestTimeout=10&publishConfirmTimeout=20&recoveryInterval=30&autoCloseConnection=false&persistentDeliveryMode=false&automaticRecovery=false&topologyRecovery=false",
+      "username", "password", "virtualHost", "host1", "host2", 1234, false, false, false, false)]
+  [InlineData("host1,host2:1234/virtualHost?requestTimeout=10&publishConfirmTimeout=20&recoveryInterval=30&autoCloseConnection=false&persistentDeliveryMode=false&automaticRecovery=false&topologyRecovery=false",
+      "guest", "guest", "virtualHost", "host1", "host2", 1234, false, false, false, false)]
+  [InlineData("username:password@host1,host2?requestTimeout=10&publishConfirmTimeout=20&recoveryInterval=30&autoCloseConnection=false&persistentDeliveryMode=false&automaticRecovery=false&topologyRecovery=false",
+      "username", "password", "/", "host1", "host2", 5672, false, false, false, false)]
+  public void Should_Parse_Multi_Host_Connection_String_With_Parameters(
+  	string connectionString, string username, string password, string virtualHost,
+  	string firstHost, string secondHost, int port,
+  	bool autoClose, bool persistDelivery, bool autoRecovery, bool topoRecovery)
+  {
+  	var config = ConnectionStringParser.Parse(connectionString);
+
+  	Assert.Equal(username, config.Username);
+  	Assert.Equal(password, config.Password);
+  	Assert.Equal(virtualHost, config.VirtualHost);
+  	Assert.Equal(firstHost, config.Hostnames[0]);
+  	Assert.Equal(secondHost, config.Hostnames[1]);
+  	Assert.Equal(port, config.Port);
+  	Assert.Equal(TimeSpan.FromSeconds(10), config.RequestTimeout);
+  	Assert.Equal(TimeSpan.FromSeconds(20), config.PublishConfirmTimeout);
+  	Assert.Equal(TimeSpan.FromSeconds(30), config.RecoveryInterval);
+  	Assert.Equal(autoClose, config.AutoCloseConnection);
+  	Assert.Equal(persistDelivery, config.PersistentDeliveryMode);
+  	Assert.Equal(autoRecovery, config.AutomaticRecovery);
+  	Assert.Equal(topoRecovery, config.TopologyRecovery);
+  }
+  ```
 
 - [ ] **Step 3: Convert all 45 AAA `/* Setup */ /* Test */ /* Assert */` comments to blank-line separation.** Per spec §3 conventions row "AAA structure". Find/replace each `/* Setup */`, `/* Test */`, `/* Assert */` line with an empty line. Acceptance: `grep -c '/\* \(Setup\|Test\|Assert\) \*/' test/RawRabbit.Tests/Common/ConnectionStringParserTests.cs` returns 0.
 
@@ -440,10 +475,10 @@ This is the largest cleanup file (357 lines, 14 tests, all NON-SKIPPED). It's al
 | File | Spec §4 totals (all hits) | Wave 1 actual work (NON-SKIPPED only) |
 |------|------|---------|
 | ChannelFactoryTests.cs | 2 Assert.True(true), 0 IsType, 0 AAA | **0 — all 4 tests skipped (verify-only)** |
-| ChannelPoolTests.cs | 5 Assert.True(true), 0 IsType, 0 AAA | **2 Assert.True(true) + 1 try/catch (NON-SKIPPED tests #6 line 187 + #8 lines 234-243)** |
+| ChannelPoolTests.cs | 5 Assert.True(true), 0 IsType, 0 AAA per spec §4; **+3 xUnit1031 + 4 xUnit2020 per CIR R1** | **NON-SKIPPED: 2 Assert.True(true) + 1 try/catch + 1 xUnit2020 (tests #6 line 187 + #8 lines 234-243) + 3 xUnit1031 in tests #5 (lines 153/159) + #6 (line 185) per CIR R1 §2 F1 path a. SKIPPED-test-body D10 exception per CIR R1 §3 α: 3 `Assert.True(false, msg)` → `Assert.Fail(msg)` at lines 123, 212, 263 (style-only; assertions in skipped tests never execute).** |
 | DynamicChannelPoolTests.cs | 1 Assert.True(true), 0 IsType, 9 AAA | **1 Assert.True(true) + 9 AAA (no skipped tests)** |
 
-The other 3 Assert.True(true) hits in ChannelPoolTests.cs (lines 127, 216, 267) are inside skipped tests — do NOT touch per D10.
+The 3 Assert.True(true) hits at lines 127, 216, 267 (inside skipped tests, A25 #1) stay UNCHANGED per D10. Separately: the 3 `Assert.True(false, msg)` lines at 123, 212, 263 (also inside skipped tests, but a different anti-pattern — xUnit2020) get converted to `Assert.Fail(msg)` per the §3 α resolution above (D10-letter exception authorized by CIR R1; behaviorally inert since skipped assertions never execute).
 
 - [ ] **Step 1: ChannelPoolTests.cs — convert NON-SKIPPED `Should_Be_Able_To_Cancel_With_Token` (lines 220–243).** Replace the try/catch + 2 `Assert.True(true/false)` with `Assert.ThrowsAsync`:
 
@@ -465,30 +500,77 @@ The other 3 Assert.True(true) hits in ChannelPoolTests.cs (lines 127, 216, 267) 
 
   Drop the `/* Setup */`, `/* Test */`, `/* Assert */` AAA comments at the same time (visual blank-line separation only).
 
-- [ ] **Step 2: ChannelPoolTests.cs — drop `Assert.True(true, …)` from `Should_Be_Able_To_Have_Multiple_Pending_Requests` (line 187).** The test calls `Task.WaitAll(taskArray)` and then asserts `Assert.True(true, "No exception thrown with multiple pending");`. Drop the `Assert.True` line entirely; the test name ("Should_Be_Able_To_Have_Multiple_Pending_Requests") + the absence of an exception during `Task.WaitAll` IS the assertion. Resulting body ends:
+- [ ] **Step 2: ChannelPoolTests.cs — convert NON-SKIPPED `Should_Be_Able_To_Have_Multiple_Pending_Requests` (lines 162–188) to async + drop the `Assert.True(true)` placeholder.** Originally `public void` with `Task.WaitAll(taskArray)` (xUnit1031) + `Assert.True(true, "...")` placeholder (A25 #1). Convert to `async Task` with `await Task.WhenAll(taskArray)`; drop the placeholder. Single rewrite addresses both A25 #1 and the xUnit1031 hit on line 185 (per CIR R1 §2 Finding 1 path a):
 
   ```csharp
-  for (var i = 0; i < numberOfCalls; i++)
+  [Fact]
+  public async Task Should_Be_Able_To_Have_Multiple_Pending_Requests()
   {
-  	taskArray[i] = pool.GetAsync();
-  }
+  	const int numberOfCalls = 200;
+  	var taskArray = new Task[numberOfCalls];
+  	var mockObjects = new List<Mock<IModel>> { new Mock<IModel>(), new Mock<IModel>(), new Mock<IModel>() };
+  	foreach (var mockObject in mockObjects)
+  	{
+  		mockObject.As<IRecoverable>();
+  		mockObject
+  			.Setup(m => m.IsClosed)
+  			.Returns(false);
+  	}
+  	var pool = new StaticChannelPool(mockObjects.Select(m => m.Object));
 
-  Task.WaitAll(taskArray);
+  	for (var i = 0; i < numberOfCalls; i++)
+  	{
+  		taskArray[i] = pool.GetAsync();
+  	}
+
+  	await Task.WhenAll(taskArray);
+  }
   ```
 
-  No new assertion required — xUnit treats no-exception-thrown as pass.
+- [ ] **Step 3: ChannelPoolTests.cs — convert NON-SKIPPED `Should_Not_Throw_If_All_Channels_Are_Closed_But_At_Least_One_Is_Recoverable` (lines 132–160) to async-await pattern (per CIR R1 §2 Finding 1 path a).** Originally uses `channelTask.Wait(TimeSpan.FromMilliseconds(20))` + `Assert.False(channelTask.IsCompleted, ...)` (A25 #4 race-prone wait-and-poll) and `channelTask.Result` (xUnit1031). Replace the wait-and-poll with `Task.WhenAny` + `Task.Delay` (preserves the pre-recovery-not-complete invariant via the Delay winning the race) and replace `.Result` with `await`:
 
-- [ ] **Step 3: ChannelPoolTests.cs — preserve all 3 skip annotations verbatim.** Skipped tests at lines 106, 190, 245 retain their `[Fact(Skip = "Phase 5/7 territory: …")]` decorations and bodies UNCHANGED. Per D10 + spec §13.1.
+  ```csharp
+  [Fact]
+  public async Task Should_Not_Throw_If_All_Channels_Are_Closed_But_At_Least_One_Is_Recoverable()
+  {
+  	var closedChannel = new Mock<IModel> { Name = "Always open" };
+  	var recoverableChannel = new Mock<IModel> { Name = "Will Recover" };
+  	var recoverable = recoverableChannel.As<IRecoverable>();
 
-- [ ] **Step 4: DynamicChannelPoolTests.cs — drop `Assert.True(true, …)` from `Should_Not_Throw_Exception_If_Trying_To_Remove_Channel_Not_In_Pool` (line 49).** Same pattern as Step 2: drop the `Assert.True` line; no replacement needed. Resulting body ends:
+  	closedChannel
+  		.Setup(c => c.IsClosed)
+  		.Returns(true);
+
+  	recoverableChannel
+  		.SetupSequence(model => model.IsClosed)
+  		.Returns(true)
+  		.Returns(true)
+  		.Returns(false);
+
+  	var pool = new StaticChannelPool(new[] { recoverableChannel.Object, closedChannel.Object });
+
+  	var channelTask = pool.GetAsync();
+  	var winner = await Task.WhenAny(channelTask, Task.Delay(TimeSpan.FromMilliseconds(20)));
+  	Assert.NotSame(channelTask, winner);
+
+  	recoverable.Raise(r => r.Recovery += null, null, null);
+  	var result = await channelTask;
+
+  	Assert.Equal(recoverableChannel.Object, result);
+  }
+  ```
+
+- [ ] **Step 4: ChannelPoolTests.cs — preserve 3 skip annotations + Phase 5/7 commentary; convert 3 dead-code `Assert.True(false, msg)` → `Assert.Fail(msg)` inside skipped-test bodies (per CIR R1 §3 α resolution).** Skip annotations at lines 106, 190, 245 retain their `[Fact(Skip = "Phase 5/7 territory: …")]` decorations UNCHANGED. Skipped-test bodies retain all setup code, broker-mocking, and Phase 5/7 commentary UNCHANGED — except: each of the 3 skipped tests contains a single `Assert.True(false, "<msg>")` line (originally at lines 123, 212, 263; line numbers shift after Steps 1-3) that triggers xUnit2020. Convert each to `Assert.Fail("<msg>")` (same xUnit failure message, modern API). D10-letter exception authorized by CIR R1 §3 forced-decision (α): behaviorally inert (skipped assertions never execute); D10's spirit preserved (skip annotation + Phase 5/7 commentary intact; broker-mocking intact). Per D10 + spec §13.1 (annotations preserved); per §3 α (Assert.Fail conversion).
+
+- [ ] **Step 5: DynamicChannelPoolTests.cs — drop `Assert.True(true, …)` from `Should_Not_Throw_Exception_If_Trying_To_Remove_Channel_Not_In_Pool` (line 49).** Same pattern as Step 2: drop the `Assert.True` line; no replacement needed. Resulting body ends:
 
   ```csharp
   pool.Remove(channel.Object);
   ```
 
-- [ ] **Step 5: DynamicChannelPoolTests.cs — convert all 9 AAA comments to blank lines.** 3 tests × 3 comments each = 9 AAA hits.
+- [ ] **Step 6: DynamicChannelPoolTests.cs — convert all 9 AAA comments to blank lines.** 3 tests × 3 comments each = 9 AAA hits.
 
-- [ ] **Step 6: ChannelFactoryTests.cs (Channel) — verify skip-preservation.** No edits. Confirm:
+- [ ] **Step 7: ChannelFactoryTests.cs (Channel) — verify skip-preservation.** No edits. Confirm:
 
   ```bash
   grep -c '\[Fact(Skip = "Phase 5/7' test/RawRabbit.Tests/Channel/ChannelFactoryTests.cs
@@ -497,7 +579,7 @@ The other 3 Assert.True(true) hits in ChannelPoolTests.cs (lines 127, 216, 267) 
 
   All 4 skip annotations at lines 15, 46, 77, 103 with the same Phase 5/7 commentary as before this wave.
 
-- [ ] **Step 7: Build + targeted test run.**
+- [ ] **Step 8: Build + targeted test run.**
 
   ```bash
   dotnet build -c Release
@@ -506,7 +588,7 @@ The other 3 Assert.True(true) hits in ChannelPoolTests.cs (lines 127, 216, 267) 
 
   Expected: 0 build errors; Channel namespace tests: 8 passed (was 8 — same non-skipped count: 5 in ChannelPoolTests + 3 in DynamicChannelPoolTests + 0 in ChannelFactoryTests), 7 skipped (preserved: 4 in ChannelFactoryTests + 3 in ChannelPoolTests), 0 failed.
 
-- [ ] **Step 8: Commit.**
+- [ ] **Step 9: Commit.**
 
   ```bash
   git add test/RawRabbit.Tests/Channel/ChannelPoolTests.cs test/RawRabbit.Tests/Channel/DynamicChannelPoolTests.cs
@@ -633,10 +715,10 @@ This task confirms spec §7 acceptance condition 1 ("Wave 1 shipped (mandatory)"
 
   ```bash
   grep -rEn '\[Fact\(Skip\s*=\s*"Phase 5/7' test/RawRabbit.Tests test/RawRabbit.Enrichers.Polly.Tests
-  # Expect: exactly 9 hits at:
-  #   test/RawRabbit.Tests/Channel/ChannelFactoryTests.cs:15, :46, :77, :103
-  #   test/RawRabbit.Tests/Channel/ChannelPoolTests.cs:106, :190, :245
-  #   test/RawRabbit.Enrichers.Polly.Tests/Services/ChannelFactoryTests.cs:16, :52
+  # Expect: exactly 9 hits — distribution:
+  #   test/RawRabbit.Tests/Channel/ChannelFactoryTests.cs: 4 hits at lines 15, 46, 77, 103 (file untouched in Wave 1)
+  #   test/RawRabbit.Tests/Channel/ChannelPoolTests.cs: 3 hits (line numbers shift relative to pre-Wave-1 due to Task 5 edits)
+  #   test/RawRabbit.Enrichers.Polly.Tests/Services/ChannelFactoryTests.cs: 2 hits at lines 16, 52 (file untouched in Wave 1)
   ```
 
   Each annotation message starts with `Phase 5/7 territory:` per Phase 4's documented convention.
