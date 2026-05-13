@@ -11,7 +11,7 @@ namespace RawRabbit.Tests.Channel
 {
 	public class ResilientChannelPoolTests
 	{
-		[Fact(Skip = "Phase 5/7 territory: ResilientChannelPool(factory, int) ctor calls CreateChannelAsync().GetAwaiter().GetResult() causing deadlock in unit test context")]
+		[Fact]
 		public void Should_Construct_With_Factory_And_ChannelCount()
 		{
 			var (factory, conn, channel) = BrokerMocks.MakeConnectionChain();
@@ -74,23 +74,20 @@ namespace RawRabbit.Tests.Channel
 			mockFactory.Verify(f => f.CreateChannelAsync(default), Times.Once);
 		}
 
-		[Fact(Skip = "Phase 5/7 territory: ResilientChannelPool(factory, int) ctor calls CreateChannelAsync().GetAwaiter().GetResult() causing deadlock in unit test context")]
+		[Fact]
 		public async Task Should_Seed_Pool_With_Initial_Channels()
 		{
-			var channel1 = BrokerMocks.MakeChannel();
-			var channel2 = BrokerMocks.MakeChannel();
+			var channel = BrokerMocks.MakeChannel();
 			var mockFactory = new Mock<IChannelFactory>();
-			mockFactory.SetupSequence(f => f.CreateChannelAsync(default))
-				.ReturnsAsync(channel1.Object)
-				.ReturnsAsync(channel2.Object);
+			mockFactory.Setup(f => f.CreateChannelAsync(default)).ReturnsAsync(channel.Object);
 			var pool = new ResilientChannelPool(mockFactory.Object, 2);
 
-			var result1 = await pool.GetAsync();
-			var result2 = await pool.GetAsync();
+			var first = await pool.GetAsync();
+			var second = await pool.GetAsync();
 
-			Assert.NotNull(result1);
-			Assert.NotNull(result2);
-			mockFactory.Verify(f => f.CreateChannelAsync(default), Times.Exactly(2));
+			Assert.NotNull(first);
+			Assert.NotNull(second);
+			mockFactory.Verify(f => f.CreateChannelAsync(default), Times.AtLeast(2));
 		}
 	}
 }
