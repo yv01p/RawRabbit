@@ -32,6 +32,10 @@ The following file categories are skipped from F1=(a) coverage; they have no beh
 
 Each middleware in scope (T1/T2/T3 Base/T5/T6) declares a co-located `<Name>Options` POCO class in the same source file. Per Wave 4 cadence: **the `*Options` POCO is tested in the same test file as its middleware** (e.g., `ConsumeAttributeMiddlewareTests.cs` covers both `ConsumeAttributeMiddleware` ctor + `InvokeAsync` AND `ConsumeAttributeOptions` POCO defaults). Implementer prompt enumerates the public surface of each `*Options` class.
 
+### Co-located static extension class testing convention
+
+When a middleware source file co-declares a `public static class <Name>Extensions` with public methods reading/writing `IPipeContext.Properties` (not pure `IClientBuilder` plugin extensions), the extensions are tested in the same test file as the middleware. Single occurrence in Wave 5: `WildcardRoutingKeyExtensions` co-located with `WildcardRoutingKeyMiddleware` (T2).
+
 ### `StagedMiddleware` `StageMarker` F1=(a) coverage
 
 Every `StagedMiddleware` subclass overrides a public abstract `StageMarker` property. Per F1=(a) strict, each middleware test must include a `Should_Have_<Stage>_StageMarker` test verifying the override returns the expected stage constant. Plan-write enumeration locks the expected stage per middleware via source read.
@@ -116,7 +120,7 @@ EOF
 - `Middleware/GlobalExecutionIdMiddlewareTests.cs` — **`[Collection("LogProviderState")]`**. `GlobalExecutionIdMiddleware : StagedMiddleware` ctor `(GlobalExecutionOptions options = null)` + `InvokeAsync` resolves/creates execution id from context or repo + co-located `GlobalExecutionOptions` POCO. F1=(a) + `StageMarker`.
 - `Middleware/AppendGlobalExecutionIdMiddlewareTests.cs` — **`[Collection("LogProviderState")]`**. `AppendGlobalExecutionIdMiddleware : StagedMiddleware` ctor `(AppendGlobalExecutionIdOptions options = null)` + `InvokeAsync` appends execution id to outbound headers + co-located `AppendGlobalExecutionIdOptions`. F1=(a) + `StageMarker`.
 - `Middleware/ExecutionIdRoutingMiddlewareTests.cs` — **`[Collection("LogProviderState")]`**. `ExecutionIdRoutingMiddleware : StagedMiddleware` ctor `(ExecutionIdRoutingOptions options = null)` + `InvokeAsync` updates routing key with execution id + co-located `ExecutionIdRoutingOptions`. F1=(a) + `StageMarker`.
-- `Middleware/WildcardRoutingKeyMiddlewareTests.cs` — **`[Collection("LogProviderState")]`**. `WildcardRoutingKeyMiddleware : StagedMiddleware` ctor `(WildcardRoutingKeyOptions options = null)` + `InvokeAsync` replaces wildcard segments + co-located `WildcardRoutingKeyOptions`. F1=(a) + `StageMarker`.
+- `Middleware/WildcardRoutingKeyMiddlewareTests.cs` — **`[Collection("LogProviderState")]`**. `WildcardRoutingKeyMiddleware : StagedMiddleware` ctor `(WildcardRoutingKeyOptions options = null)` + `InvokeAsync` replaces wildcard segments + co-located `WildcardRoutingKeyOptions`. F1=(a) + `StageMarker`. **Also covers co-located `WildcardRoutingKeyExtensions` (`UseWildcardRoutingSuffix<TPipeContext>(this TPipeContext, bool withWildCard = true)` writes `SubscribeWithWildCard` flag to `context.Properties`; `GetWildcardRoutingSuffixActive(this IPipeContext)` reads with default `true`)** per the co-located static extension convention; concrete `PipeContext` pattern.
 - `Middleware/PersistGlobalExecutionIdMiddlewareTests.cs` — `PersistGlobalExecutionIdMiddleware : StagedMiddleware` ctor `(PersistGlobalExecutionIdOptions options = null)` + `InvokeAsync` persists execution id to repo on consume + co-located `PersistGlobalExecutionIdOptions`. F1=(a) + `StageMarker`.
 - `Middleware/PublishHeaderAppenderMiddlewareTests.cs` — `PublishHeaderAppenderMiddleware : StagedMiddleware` ctor `(PublishHeaderAppenderOptions options = null)` + `InvokeAsync` appends execution id to publish headers + co-located `PublishHeaderAppenderOptions`. F1=(a) + `StageMarker`.
 
@@ -218,27 +222,29 @@ EOF
 
 ```csharp
 [Fact]
-public async Task Should_Wrap_DeclareQueue_In_Policy_Execute()
+public async Task Should_Execute_DeclareQueue_Inside_Policy()
 {
     // Arrange: instantiate Polly subclass + parent's required deps
     var mockTopology = new Mock<ITopologyProvider>();
-    var mockChannel = new Mock<IModel>();
+    mockTopology.Setup(t => t.DeclareQueueAsync(It.IsAny<QueueDeclaration>()))
+                .Returns(Task.CompletedTask);
     var middleware = new RawRabbit.Enrichers.Polly.Middleware.QueueDeclareMiddleware(mockTopology.Object);
 
-    // Set up parent's IPipeContext state to reach the protected DeclareQueueAsync hook
-    var policyExecuted = false;
-    var policy = Policy.Handle<Exception>().Retry(0, (ex, retry) => { policyExecuted = true; });
+    // Set up parent's IPipeContext state to reach the protected DeclareQueueAsync hook.
+    // Use Policy.NoOpAsync() so policy.ExecuteAsync(action) invokes the action exactly once.
+    // Sync policies (Policy.Handle<>().Retry(...)) throw InvalidOperationException when
+    // invoked via ExecuteAsync — Polly v7 strictly separates sync/async APIs.
     var queueDeclaration = new QueueDeclaration { Name = "test.queue" };
     var ctx = new PipeContext { Properties = new Dictionary<string, object>() };
-    ctx.UsePolicy(policy, PolicyKeys.QueueDeclare);
+    ctx.UsePolicy(Policy.NoOpAsync(), PolicyKeys.QueueDeclare);
     ctx.Properties[PipeKey.QueueDeclaration] = queueDeclaration;
-    ctx.Properties[PipeKey.Channel] = mockChannel.Object;
 
-    // Act: call inherited InvokeAsync (parent reaches protected DeclareQueueAsync)
+    // Act: call inherited InvokeAsync (parent reaches protected DeclareQueueAsync,
+    // which Polly's override wraps in policy.ExecuteAsync(action))
     await middleware.InvokeAsync(ctx, CancellationToken.None);
 
-    // Assert: policy executed AND base broker call ran inside the policy
-    Assert.True(policyExecuted);
+    // Assert: the inner topology call ran inside the policy's ExecuteAsync.
+    // (Verify proves policy executed: no other code path reaches Topology.DeclareQueueAsync.)
     mockTopology.Verify(t => t.DeclareQueueAsync(queueDeclaration), Times.Once);
 }
 ```
