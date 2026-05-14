@@ -84,6 +84,26 @@ namespace RawRabbit.Operations.MessageSequence.Tests.StateMachine
 		}
 
 		[Fact]
+		public void Should_Return_MessageSequence_From_Complete_Happy_Path()
+		{
+			var mockBus = CreateMockBusClientWithChannel();
+			var mockNaming = new Mock<INamingConventions>();
+			mockNaming.Setup(n => n.RoutingKeyConvention).Returns(type => "test.routing.key");
+			var config = new RawRabbitConfiguration { RequestTimeout = TimeSpan.FromMinutes(5) };
+			var messageSequence = new SmMessageSequence(mockBus, mockNaming.Object, config);
+
+			// PublishAsync sets up _fireAction; required before Complete.
+			// Use different message types to avoid Stateless trigger parameter conflict.
+			var builder = messageSequence.PublishAsync<TestMessage>();
+
+			var result = ((IMessageSequenceBuilder)builder).Complete<CompleteTestMessage>();
+
+			Assert.NotNull(result);
+			Assert.NotNull(result.Task);
+			Assert.IsType<RawRabbit.Operations.MessageSequence.Model.MessageSequence<CompleteTestMessage>>(result);
+		}
+
+		[Fact]
 		public void Should_Return_IMessageSequenceBuilder_From_PublishAsync_With_Default_Message()
 		{
 			var mockBus = new Mock<IBusClient>();
@@ -177,6 +197,7 @@ namespace RawRabbit.Operations.MessageSequence.Tests.StateMachine
 		}
 
 		private class TestMessage { }
+		private class CompleteTestMessage { }
 		private class TestContext { }
 	}
 }
