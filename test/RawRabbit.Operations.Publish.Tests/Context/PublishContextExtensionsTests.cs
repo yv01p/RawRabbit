@@ -56,5 +56,13 @@ namespace RawRabbit.Operations.Publish.Tests.Context
 			storedAction(mockBuilder.Object);
 			Assert.True(invoked);
 		}
+
+		[Fact]
+		public void Should_Throw_When_Context_Is_Null()
+		{
+			Action<IPublisherConfigurationBuilder> configAction = cfg => { };
+
+			Assert.Throws<System.NullReferenceException>(() => PublishContextExtensions.UsePublishConfiguration(null, configAction));
+		}
 	}
 }

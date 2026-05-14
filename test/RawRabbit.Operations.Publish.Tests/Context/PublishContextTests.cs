@@ -54,5 +54,11 @@ namespace RawRabbit.Operations.Publish.Tests.Context
 
 			Assert.IsAssignableFrom<IPipeContext>(publishContext);
 		}
+
+		[Fact]
+		public void Should_Throw_When_Inner_Context_Is_Null()
+		{
+			Assert.Throws<System.NullReferenceException>(() => new PublishContext(null));
+		}
 	}
 }

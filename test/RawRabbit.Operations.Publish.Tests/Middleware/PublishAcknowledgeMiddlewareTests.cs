@@ -250,6 +250,12 @@ namespace RawRabbit.Operations.Publish.Tests.Middleware
 
 			Assert.Equal(fallbackTimeout, result);
 		}
+
+		[Fact]
+		public void Should_Throw_When_Context_Is_Null()
+		{
+			Assert.Throws<System.NullReferenceException>(() => PublishAcknowledgePipeGetExtensions.GetPublishAcknowledgeTimeout(null));
+		}
 	}
 
 	[Collection("LogProviderState")]
@@ -295,6 +301,20 @@ namespace RawRabbit.Operations.Publish.Tests.Middleware
 			Assert.Same(mockContext.Object, result);
 			Assert.True(props.ContainsKey(PublishKey.PublishAcknowledgeTimeout));
 			Assert.Equal(TimeSpan.MaxValue, props[PublishKey.PublishAcknowledgeTimeout]);
+		}
+
+		[Fact]
+		public void Should_Throw_When_Context_Is_Null_TimeSpan_Overload()
+		{
+			var timeout = TimeSpan.FromSeconds(20);
+
+			Assert.Throws<System.NullReferenceException>(() => PublishAcknowledgePipeUseExtensions.UsePublishAcknowledge(null, timeout));
+		}
+
+		[Fact]
+		public void Should_Throw_When_Context_Is_Null_Bool_Overload()
+		{
+			Assert.Throws<System.NullReferenceException>(() => PublishAcknowledgePipeUseExtensions.UsePublishAcknowledge(null, false));
 		}
 	}
 }
