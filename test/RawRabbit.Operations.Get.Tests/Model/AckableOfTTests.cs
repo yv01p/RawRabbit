@@ -141,6 +141,24 @@ namespace RawRabbit.Operations.Get.Tests.Model
 		}
 
 		[Fact]
+		public void Nack_Should_Throw_NullReferenceException_When_Channel_Is_Null()
+		{
+			var content = new TestMessage { Value = "null-channel-nack" };
+			var ackable = new Ackable<TestMessage>(content, null, 100UL);
+
+			Assert.Throws<NullReferenceException>(() => ackable.Nack());
+		}
+
+		[Fact]
+		public void Reject_Should_Throw_NullReferenceException_When_Channel_Is_Null()
+		{
+			var content = new TestMessage { Value = "null-channel-reject" };
+			var ackable = new Ackable<TestMessage>(content, null, 110UL);
+
+			Assert.Throws<NullReferenceException>(() => ackable.Reject());
+		}
+
+		[Fact]
 		public void DeliveryTagFunc_Should_Be_Invoked_For_Each_Operation()
 		{
 			var mockChannel = new Mock<IModel>();
