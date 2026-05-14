@@ -61,7 +61,12 @@
 **Per parent D3 — mock at `IPipeContext` boundary (NOT broker boundary).** Each Operations middleware test:
 
 1. Instantiates the middleware-under-test directly (its public ctor signature; pass `Mock<IPipeContext>`-derived dependencies as needed)
-2. Builds a `Mock<IPipeContext>` via `new Mock<IPipeContext>()`; `.Setup(c => c.GetXyz()).Returns(...)` per the middleware's read paths
+2. Set up the data the middleware will read from `IPipeContext`. **Three patterns** are valid; pick per test based on what's being asserted:
+   - **`Mock<IPipeContext>` + Properties dictionary:** `var ctx = new Mock<IPipeContext>(); var props = new Dictionary<string, object> { [PipeKey.Channel] = mockChannel.Object, ... }; ctx.Setup(c => c.Properties).Returns(props);` — extension methods like `context.GetChannel()` then read from this dictionary. Use when the test asserts via `ctx.Verify(...)` on context interactions.
+   - **Concrete `PipeContext`:** `var ctx = new PipeContext { Properties = new Dictionary<string, object> { [PipeKey.Channel] = mockChannel.Object } };` — pass `ctx` directly to `InvokeAsync`. Simpler when the test asserts on outputs / dependency mocks rather than context interactions.
+   - **Bypass via options injection:** for middleware whose options expose `*Func` delegates (e.g., `AckableResultOptions.ChannelFunc`), construct with a custom func that returns the mock directly: `new AckableResultMiddleware(new AckableResultOptions { ChannelFunc = _ => mockChannel.Object })`. No `IPipeContext` setup needed for that read path.
+
+   **Why three patterns, not `.Setup(c => c.GetXyz())`:** all `Get*(this IPipeContext)` calls (`GetChannel`, `GetMessageType`, `GetDeliveryEventArgs`, `GetPublishConfiguration`, etc. — 24 enumerated in `src/RawRabbit/Pipe/`) are **extension methods** on `IPipeContext.Properties`, NOT interface members. `Mock<IPipeContext>().Setup(c => c.GetChannel())` does NOT compile (Moq cannot intercept static extension methods). Plan-write verification enumerates the `PipeKey.*` constants per source class (per W4-D3) so each test knows which dictionary keys to populate.
 3. Calls `await middleware.InvokeAsync(ctx.Object, CancellationToken.None)` (or `CancellationToken` token-cancellation tests use `await Assert.ThrowsAnyAsync<OperationCanceledException>(...)`)
 4. Asserts on context mutations via `.Verify(c => c.Properties.Add(...), Times.Once)` etc., AND/OR on dependency-mock invocations
 
@@ -137,7 +142,7 @@ Spec commits to **shape** per project (W4-D3). **Plan locks exact test-method en
 - **Source files in scope** — full path list (locked at plan-write time)
 - **Test file paths to create** — one per source class default; sub-areas may consolidate (Tools per W4-R2)
 - **Public-method coverage** — every public method on every public class gets ≥1 happy + ≥1 error test (F1=(a) strict per Wave 2/3 carry-forward)
-- **Mocking surface** — `Mock<IPipeContext>` always; project-specific `Mock<I*>` for direct dependencies (e.g., `Mock<IChannelFactory>`, `Mock<ISerializer>`); inline `Mock<IModel>` for the 6 broker-touching middleware in §2
+- **Mocking surface** — context surface per §2's three patterns (`Mock<IPipeContext>` + Properties dict, concrete `PipeContext`, or `*Func` options injection); project-specific `Mock<I*>` for direct dependencies (e.g., `Mock<IChannelFactory>`, `Mock<ISerializer>`, `Mock<IBusClient>` for MessageSequence per §11 A20); inline `Mock<IModel>` for the 6 broker-touching middleware in §2
 - **`[Collection("LogProviderState")]`** — required on test classes for the 10 `LogProvider.For<T>()`-reading sources listed in §2
 - **Namespace alias** — required on test files in `MessageSequence/Model`, `MessageSequence/StateMachine`, `Respond/Acknowledgement` if they reference the same-named class
 
@@ -248,7 +253,7 @@ The following 20 assumptions were enumerated COLD (against the design alone, bef
 | A17 | Parent §6 row 4 lower bound for Wave 4 is 80 net-new tests | Parent §5 estimate table row: `Operations.* (8 new test projects) | 8 | 101 | ~24-40 | ~80-120`; per-project parent §5 Operations bucket: `Estimated 8-15 tests per project → ~80-120 total` |
 | A18 | `Middleware` base class is at `src/RawRabbit/Pipe/Middleware/Middleware.cs:7` (not in any Operations.* namespace) | `grep -rn "public abstract class Middleware\b" src/RawRabbit/Pipe/` returns the single hit. Wave 3's `using MiddlewareBase = ...` alias pattern still applies if Operations test files reference the abstract base by simple name within a `.Middleware` namespace |
 | A19 | Each Operations.*.Tests dir contains only its csproj — no leftover test files / fixtures | `find test/RawRabbit.Operations.*.Tests/ -type f -not -path '*/obj/*' -not -path '*/bin/*'` → 8 hits, all csprojs |
-| A20 | `Operations.*` sources do NOT contain `RawRabbitFactory.CreateSingleton` or `new RawRabbitFactory` (broker-trigger pattern absent) | `grep -rln "RawRabbitFactory\.CreateSingleton\|new RawRabbitFactory\b" src/RawRabbit.Operations.*/` → 0 hits. Broker-trigger pattern confined to RawRabbit core. |
+| A20 | `Operations.*` sources do NOT contain `RawRabbitFactory.CreateSingleton` or `new RawRabbitFactory` (no `RawRabbitFactory`-shaped broker-trigger; one sync-wait `IBusClient` consumer at `MessageSequence/StateMachine/MessageSequence.cs:235,245` requires `Mock<IBusClient>` per §5 mocking-surface bullet 2 — covered) | `grep -rln "RawRabbitFactory\.CreateSingleton\|new RawRabbitFactory\b" src/RawRabbit.Operations.*/` → 0 hits. CDR R1 cross-check additionally found `_client.CreateChannelAsync().GetAwaiter().GetResult()` + `_client.InvokeAsync(...).GetAwaiter().GetResult()` in `MessageSequence/StateMachine/MessageSequence.cs:235,245` (different shape; covered by §5 `Mock<I*>` rule). |
 
 ---
 
