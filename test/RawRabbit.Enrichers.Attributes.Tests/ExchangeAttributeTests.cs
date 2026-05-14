@@ -39,19 +39,21 @@ namespace RawRabbit.Enrichers.Attributes.Tests
 		}
 
 		[Fact]
-		public void Should_Accept_Durable_Property_Assignment()
+		public void Should_Allow_Setting_Durable_Without_Exception()
 		{
+			// Durable is setter-only writing to internal NullableDurability;
+			// end-to-end behavior verified in ConsumeAttributeMiddlewareTests.
+			// Per A25 (no reflection), only the no-throw act is observable here.
 			var attribute = new ExchangeAttribute { Durable = true };
-
-			Assert.NotNull(attribute);
 		}
 
 		[Fact]
-		public void Should_Accept_AutoDelete_Property_Assignment()
+		public void Should_Allow_Setting_AutoDelete_Without_Exception()
 		{
+			// AutoDelete is setter-only writing to internal NullableAutoDelete;
+			// end-to-end behavior verified in ConsumeAttributeMiddlewareTests.
+			// Per A25 (no reflection), only the no-throw act is observable here.
 			var attribute = new ExchangeAttribute { AutoDelete = true };
-
-			Assert.NotNull(attribute);
 		}
 	}
 }
