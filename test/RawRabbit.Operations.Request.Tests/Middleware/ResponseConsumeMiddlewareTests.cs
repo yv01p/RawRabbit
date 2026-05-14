@@ -7,6 +7,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RawRabbit.Configuration.Consume;
 using RawRabbit.Configuration.Consumer;
+using RawRabbit.Configuration.Publisher;
 using RawRabbit.Consumer;
 using RawRabbit.Operations.Request.Configuration;
 using RawRabbit.Operations.Request.Context;
@@ -132,6 +133,102 @@ namespace RawRabbit.Operations.Request.Tests.Middleware
 			var middleware = new ResponseConsumeMiddleware(mockConsumerFactory.Object, mockPipeBuilderFactory.Object, options);
 
 			Assert.True(pipeBuilderInvoked);
+		}
+
+		[Fact]
+		public async Task Should_Register_Consumer_And_Invoke_Next_Pipe()
+		{
+			var mockConsumerFactory = new Mock<IConsumerFactory>();
+			var mockPipeBuilderFactory = new Mock<IPipeBuilderFactory>();
+			var mockModel = new Mock<IModel>();
+			var consumer = new EventingBasicConsumer(mockModel.Object);
+			var mockNextPipe = new Mock<RawRabbit.Pipe.Middleware.Middleware>();
+			var responsePipe = new NoOpMiddleware();
+			var context = new PipeContext { Properties = new Dictionary<string, object>() };
+			var consumeConfig = new ConsumeConfiguration { QueueName = "response-queue", ConsumerTag = "test-tag" };
+			var basicProps = new Mock<IBasicProperties>();
+			basicProps.Setup(p => p.CorrelationId).Returns("test-correlation-id");
+			basicProps.Setup(p => p.MessageId).Returns("test-message-id");
+
+			var requestConfig = new RequestConfiguration
+			{
+				Request = new PublisherConfiguration(),
+				Response = new ConsumerConfiguration { Consume = consumeConfig }
+			};
+
+			context.Properties.Add(RequestKey.Configuration, requestConfig);
+			context.Properties.Add(PipeKey.BasicProperties, basicProps.Object);
+
+			mockConsumerFactory.Setup(f => f.GetConfiguredConsumerAsync(It.IsAny<ConsumeConfiguration>(), null, It.IsAny<CancellationToken>()))
+				.ReturnsAsync(consumer);
+
+			mockPipeBuilderFactory.Setup(f => f.Create(It.IsAny<Action<IPipeBuilder>>()))
+				.Returns(responsePipe);
+
+			mockNextPipe.Setup(p => p.InvokeAsync(It.IsAny<IPipeContext>(), It.IsAny<CancellationToken>()))
+				.Returns(Task.CompletedTask)
+				.Callback<IPipeContext, CancellationToken>((ctx, token) =>
+				{
+					var deliverArgs = new BasicDeliverEventArgs
+					{
+						BasicProperties = basicProps.Object
+					};
+					Task.Run(() => consumer.HandleBasicDeliver("test-tag", 1, false, "test-exchange", "test-routing", basicProps.Object, new byte[0]));
+				});
+
+			var options = new ResponseConsumerOptions { ResponseReceived = builder => { } };
+			var middleware = new ResponseConsumeMiddleware(mockConsumerFactory.Object, mockPipeBuilderFactory.Object, options);
+			middleware.Next = mockNextPipe.Object;
+
+			await middleware.InvokeAsync(context, CancellationToken.None);
+
+			mockConsumerFactory.Verify(f => f.GetConfiguredConsumerAsync(consumeConfig, null, It.IsAny<CancellationToken>()), Times.Once);
+			mockNextPipe.Verify(p => p.InvokeAsync(context, It.IsAny<CancellationToken>()), Times.Once);
+			Assert.True(context.Properties.ContainsKey(PipeKey.Consumer));
+			Assert.Same(consumer, context.Properties[PipeKey.Consumer]);
+		}
+
+		[Fact]
+		public async Task Should_Throw_OperationCanceledException_When_Token_Cancelled()
+		{
+			var mockConsumerFactory = new Mock<IConsumerFactory>();
+			var mockPipeBuilderFactory = new Mock<IPipeBuilderFactory>();
+			var mockModel = new Mock<IModel>();
+			var consumer = new EventingBasicConsumer(mockModel.Object);
+			var mockNextPipe = new Mock<RawRabbit.Pipe.Middleware.Middleware>();
+			var responsePipe = new NoOpMiddleware();
+			var context = new PipeContext { Properties = new Dictionary<string, object>() };
+			var consumeConfig = new ConsumeConfiguration { QueueName = "response-queue", ConsumerTag = "test-tag" };
+			var basicProps = new Mock<IBasicProperties>();
+			basicProps.Setup(p => p.CorrelationId).Returns("test-correlation-id");
+
+			var requestConfig = new RequestConfiguration
+			{
+				Request = new PublisherConfiguration(),
+				Response = new ConsumerConfiguration { Consume = consumeConfig }
+			};
+
+			context.Properties.Add(RequestKey.Configuration, requestConfig);
+			context.Properties.Add(PipeKey.BasicProperties, basicProps.Object);
+
+			mockConsumerFactory.Setup(f => f.GetConfiguredConsumerAsync(It.IsAny<ConsumeConfiguration>(), null, It.IsAny<CancellationToken>()))
+				.ReturnsAsync(consumer);
+
+			mockPipeBuilderFactory.Setup(f => f.Create(It.IsAny<Action<IPipeBuilder>>()))
+				.Returns(responsePipe);
+
+			mockNextPipe.Setup(p => p.InvokeAsync(It.IsAny<IPipeContext>(), It.IsAny<CancellationToken>()))
+				.Returns(Task.CompletedTask);
+
+			var options = new ResponseConsumerOptions { ResponseReceived = builder => { } };
+			var middleware = new ResponseConsumeMiddleware(mockConsumerFactory.Object, mockPipeBuilderFactory.Object, options);
+			middleware.Next = mockNextPipe.Object;
+
+			var cts = new CancellationTokenSource();
+			cts.Cancel();
+
+			await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+				await middleware.InvokeAsync(context, cts.Token));
 		}
 	}
 
