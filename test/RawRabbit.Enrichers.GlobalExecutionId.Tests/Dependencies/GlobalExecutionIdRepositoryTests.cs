@@ -56,17 +56,17 @@ namespace RawRabbit.Enrichers.GlobalExecutionId.Tests.Dependencies
 			string taskOneResult = null;
 			string taskTwoResult = null;
 
-			var task1 = Task.Run(() =>
+			var task1 = Task.Run(async () =>
 			{
 				GlobalExecutionIdRepository.Set("task-1-id");
-				Task.Delay(50).Wait();
+				await Task.Delay(50);
 				taskOneResult = GlobalExecutionIdRepository.Get();
 			});
 
-			var task2 = Task.Run(() =>
+			var task2 = Task.Run(async () =>
 			{
 				GlobalExecutionIdRepository.Set("task-2-id");
-				Task.Delay(50).Wait();
+				await Task.Delay(50);
 				taskTwoResult = GlobalExecutionIdRepository.Get();
 			});
 
