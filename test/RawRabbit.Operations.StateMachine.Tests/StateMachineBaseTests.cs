@@ -117,6 +117,22 @@ namespace RawRabbit.Operations.StateMachine.Tests
 		}
 
 		[Fact]
+		public async Task Should_Throw_When_TriggerAsync_Called_With_Invalid_Trigger()
+		{
+			var machine = new TestStateMachine(null);
+
+			await Assert.ThrowsAnyAsync<InvalidOperationException>(() => machine.TriggerAsync("unknown"));
+		}
+
+		[Fact]
+		public async Task Should_Throw_When_TriggerAsync_Of_T_Called_With_Invalid_Trigger()
+		{
+			var machine = new TestStateMachine(null);
+
+			await Assert.ThrowsAnyAsync<InvalidOperationException>(() => machine.TriggerAsync<string>("unknown", "test payload"));
+		}
+
+		[Fact]
 		public void Should_GetDto_Return_Model()
 		{
 			var providedModel = new TestModelForBase { Id = Guid.NewGuid(), State = 1 };
