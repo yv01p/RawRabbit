@@ -18,6 +18,41 @@
 
 **Create only.** Wave 4 lands ~86 new test files across 8 already-scaffolded test projects. Zero source modifications; zero csproj modifications; zero solution-file modifications.
 
+**IBusClient-extension test setup for `Task<T>`-returning extensions.** When the extension returns a value extracted from the result context (e.g., `GetAsync` returns `result.Get<Ackable<object>>(...).AsAckable<>()`), the test MUST populate `mockContext.Properties` with the key the extension reads, so the extraction returns a meaningful value AND the test can assert on the returned value (not just on `InvokeAsync` invocation — A25 anti-pattern; Wave 3 lesson `08f3e99`).
+
+Pattern (using `GetAsync` as exemplar):
+
+```csharp
+var mockChannel = new Mock<IModel>();
+var mockGetResult = /* construct/mock BasicGetResult */;
+var ackable = new Ackable<object>(mockGetResult, mockChannel.Object, deliveryTag: 1UL);
+var props = new Dictionary<string, object> { [GetKey.AckableResult] = ackable };
+var mockContext = new Mock<IPipeContext>();
+mockContext.Setup(c => c.Properties).Returns(props);
+var mockBus = new Mock<IBusClient>();
+mockBus.Setup(b => b.InvokeAsync(It.IsAny<Action<IPipeBuilder>>(), It.IsAny<Action<IPipeContext>>(), It.IsAny<CancellationToken>())).ReturnsAsync(mockContext.Object);
+
+var result = await mockBus.Object.GetAsync();
+
+Assert.NotNull(result);
+Assert.Same(mockGetResult, result.Content);
+mockBus.Verify(b => b.InvokeAsync(It.IsAny<Action<IPipeBuilder>>(), It.IsAny<Action<IPipeContext>>(), It.IsAny<CancellationToken>()), Times.Once);
+```
+
+Affected extensions (those returning `Task<T>` and extracting via context):
+
+| Task | File | Extension | Return type | Extracts via | Plan-required mockContext key |
+|---|---|---|---|---|---|
+| T1 | `GetOperationTests.cs` | `GetAsync` | `Task<Ackable<BasicGetResult>>` | `result.Get<Ackable<object>>(GetKey.AckableResult).AsAckable<>()` | `GetKey.AckableResult` → real `Ackable<object>` |
+| T1 | `GetOfTOperationTests.cs` | `GetAsync<TMessage>` | `Task<Ackable<TMessage>>` | analogous | `GetKey.AckableResult` |
+| T1 | `GetManyOfTOperationTests.cs` | `GetManyAsync<TMessage>` | `Task<Ackable<List<Ackable<TMessage>>>>` | analogous | `GetKey.AckableResult` |
+| T2 | `MessageSequenceExtensionTests.cs` | `ExecuteSequence<TCompleteType>` | `MessageSequence<TCompleteType>` | (verify at SDD-time which key) | (verify at SDD-time) |
+| T4 | `RequestExtensionTests.cs` | `RequestAsync<TRequest, TResponse>` | `Task<TResponse>` | (verify at SDD-time which key) | (verify at SDD-time) |
+| T8 | `CreateChannelExtensionTests.cs` | `CreateChannelAsync` | `Task<IModel>` | `context.GetChannel()` (`PipeKey.Channel`) — verified at probe `src/RawRabbit.Operations.Tools/CreateChannelExtension.cs:18-19` | `PipeKey.Channel` → `Mock<IModel>.Object` |
+| T8 | `CreateConsumerExtensionTests.cs` | `CreateConsumerAsync` | `Task<IBasicConsumer>` | analogous (`PipeKey.Consumer` likely; verify at SDD) | `PipeKey.Consumer` → `Mock<IBasicConsumer>.Object` |
+
+Per-task, the keys to populate are listed in the table above. SDD implementer reads each affected extension's source body to confirm the exact `PipeKey` it reads. For `Task`-only extensions (no extraction — `PublishAsync`, `SubscribeAsync`, `BasicPublishAsync`, `BindQueueAsync`, `DeclareExchangeAsync`, `DeclareQueueAsync`, `DeleteExchangeAsync`, `DeleteQueueAsync`, `BasicConsumeAsync` — 9 of the wave's 17 IBusClient extensions), the existing pattern (Setup InvokeAsync + Verify invocation) is sufficient; the new guidance only applies to `Task<T>`-returning extensions.
+
 ### Task 1 (T1) — `test/RawRabbit.Operations.Get.Tests/` (~9 test files, ~14–18 tests)
 
 - `Middleware/AckableResultMiddlewareTests.cs` — `AckableResultMiddleware<TResult>` ctor `(AckableResultOptions<TResult>=null)` + `AckableResultMiddleware` ctor `(AckableResultOptions)` + `InvokeAsync` reads `BasicGetResult` from context, computes `Ackable`, sets `GetKey.AckableResult` in Properties. **Broker-touching: inline `Mock<IModel>` via `*Func` options injection (`ChannelFunc`, `DeliveryTagFunc`).**
