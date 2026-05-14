@@ -61,17 +61,17 @@ namespace RawRabbit.Enrichers.MessageContext.Tests.Base.Dependencies
 			object taskOneResult = null;
 			object taskTwoResult = null;
 
-			var task1 = Task.Run(() =>
+			var task1 = Task.Run(async () =>
 			{
 				repo.Set(new { Id = "task-1-context" });
-				Task.Delay(50).Wait();
+				await Task.Delay(50);
 				taskOneResult = repo.Get();
 			});
 
-			var task2 = Task.Run(() =>
+			var task2 = Task.Run(async () =>
 			{
 				repo.Set(new { Id = "task-2-context" });
-				Task.Delay(50).Wait();
+				await Task.Delay(50);
 				taskTwoResult = repo.Get();
 			});
 
